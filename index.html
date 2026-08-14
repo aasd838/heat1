@@ -1,948 +1,970 @@
-import React, { useState, useEffect } from 'react';
-import { 
-  BookOpen, Calculator, Thermometer, Activity, HelpCircle, 
-  Award, Search, Flame, Layers, Zap, TrendingUp, RefreshCw, 
-  CheckCircle2, XCircle, Info, ChevronRight, ChevronDown, Play, 
-  ArrowRight, Shield, Cpu, Gauge
-} from 'lucide-react';
-
-export default function App() {
-  const [activeTab, setActiveTab] = useState('curriculum');
-  const [selectedLecture, setSelectedLecture] = useState(1);
-  const [simType, setSimType] = useState('fin');
-
-  // --- Lecture Data Structure ---
-  const lectures = [
-    {
-      id: 1,
-      title: 'Lecture 1: Mechanisms of Heat Transfer',
-      arabicTitle: 'آليات انتقال الحرارة',
-      summary: 'مقدمة في التوصيل، الحمل، والإشعاع الحراري، وقوانين الطاقة الأساسية.',
-      keyConcepts: [
-        { name: 'Conduction (التوصيل)', eq: "q'' = -k \\frac{dT}{dx}", desc: "Fourier's Law of Heat Conduction" },
-        { name: 'Convection (الحمل)', eq: "q'' = h(T_s - T_\\infty)", desc: "Newton's Law of Cooling" },
-        { name: 'Radiation (الإشعاع)', eq: "E = \\epsilon \\sigma T_s^4", desc: "Stefan-Boltzmann Law (\\sigma = 5.67 \\times 10^{-8} W/m^2K^4)" }
-      ],
-      assumptions: ['1D Steady State', 'Constant Properties', 'Uniform Surface Temp'],
-      dataBookRef: 'Table A-1: Thermal Conductivities of Common Materials'
-    },
-    {
-      id: 2,
-      title: 'Lecture 2: Steady-State 1-D Conduction',
-      arabicTitle: 'التوصيل المستقر في بُعد واحد',
-      summary: 'جدران مستوية، أسطوانات، كرات، شبكات المقاومة الحرارية، والتوليد الحراري الداخلي.',
-      keyConcepts: [
-        { name: 'Plane Wall Resistance', eq: 'R_{th,cond} = \\frac{L}{k A}', desc: 'التوليد الحراري في جدار مستوٍ' },
-        { name: 'Cylindrical Resistance', eq: 'R_{th,cyl} = \\frac{\\ln(r_2/r_1)}{2\\pi k L}', desc: 'المقاومة الحرارية لأسطوانة مجوفة' },
-        { name: 'Heat Generation Wall', eq: 'T(x) = T_s + \\frac{\\dot{q}L^2}{2k}\\left(1 - \\frac{x^2}{L^2}\\right)', desc: 'أقصى درجة حرارة في منتصف الجدار' }
-      ],
-      assumptions: ['Steady State', '1-D Flow', 'k = constant', 'Uniform \\dot{q}'],
-      dataBookRef: 'Conduction Thermal Resistance Formulas'
-    },
-    {
-      id: 3,
-      title: 'Lecture 3: Extended Surfaces (Fins)',
-      arabicTitle: 'الأسطح الممتدة (الزعانف)',
-      summary: 'معادلة الزعنفة، الشروط الحدية للطرف، كفاءة الزعنفة \\(\\eta_f\\) وفاعليتها \\(\\varepsilon_f\\).',
-      keyConcepts: [
-        { name: 'Fin Parameter (m)', eq: 'm = \\sqrt{\\frac{h P}{k A_c}}', desc: 'مُعامل المعادلة التفاضلية للزعنفة' },
-        { name: 'Insulated Tip Profile', eq: '\\frac{\\theta(x)}{\\theta_b} = \\frac{\\cosh(m(L-x))}{\\cosh(mL)}', desc: 'توزيع الحرارة لزعنفة طرفها معزول' },
-        { name: 'Fin Efficiency', eq: '\\eta_f = \\frac{\\tanh(mL)}{mL}', desc: 'نسبة الحرارة المنتقلة للحرارة القصوى النظرية' }
-      ],
-      assumptions: ['1D conduction along fin', 'Constant h and k', 'Negligible radiation'],
-      dataBookRef: 'Fin Efficiency Charts & Geometry Formulas'
-    },
-    {
-      id: 4,
-      title: 'Lecture 4: Transient Heat Conduction',
-      arabicTitle: 'انتقال الحرارة غير المستقر',
-      summary: 'طريقة السعة المجمعة (Lumped Capacitance)، رقم بيوت Bi، رقم فوريه Fo، ومخططات هايسلر.',
-      keyConcepts: [
-        { name: 'Biot Number', eq: 'Bi = \\frac{h L_c}{k} < 0.1', desc: 'شرط صلاحية طريقة السعة المجمعة' },
-        { name: 'Lumped Temp Ratio', eq: '\\frac{T(t) - T_\\infty}{T_i - T_\\infty} = \\exp\\left(-\\frac{t}{\\tau}\\right)', desc: 'تغير الحرارة مع الزمن حيث \\(\\tau = \\frac{\\rho V c_p}{h A_s}\\)' },
-        { name: 'Fourier Number', eq: 'Fo = \\frac{\\alpha t}{L_c^2}', desc: 'الزمن الحراري المبعد' }
-      ],
-      assumptions: ['Bi < 0.1 for Lumped', 'Uniform spatial temp', 'Constant fluid props'],
-      dataBookRef: 'Heisler & Grober Charts, Table A-2'
-    },
-    {
-      id: 5,
-      title: 'Lecture 5: External Flow Convection',
-      arabicTitle: 'الحمل القسري الخارجي',
-      summary: 'الطبقة الجدارية الهيدروديناميكية والحرارية، أرقام Re, Pr, Nu، الجريان حول الألواح والأسطوانات وحزم الأنابيب.',
-      keyConcepts: [
-        { name: 'Reynolds Number', eq: 'Re_x = \\frac{\\rho V x}{\\mu} = \\frac{V x}{\\nu}', desc: 'نسبة قوى القصور الذاتي إلى قوى اللزوجة' },
-        { name: 'Prandtl Number', eq: 'Pr = \\frac{\\nu}{\\alpha} = \\frac{\\mu c_p}{k}', desc: 'نسبة الانتشارية الزخامية إلى الحرارية' },
-        { name: 'Flat Plate Nu', eq: 'Nu_x = 0.332 Re_x^{1/2} Pr^{1/3}', desc: 'جريان صفيحي على لوح مستوٍ' }
-      ],
-      assumptions: ['Evaluated at Film Temp T_f = (T_s + T_\\infty)/2', 'Constant free-stream velocity'],
-      dataBookRef: 'External Flow Correlations & Tube Bank Tables'
-    },
-    {
-      id: 6,
-      title: 'Lecture 6: Natural / Free Convection',
-      arabicTitle: 'الحمل الحر / الطبيعي',
-      summary: 'قوى الطفو، رقم جراشوف Gr، رقم رايلي Ra، الحمل الحر على الألواح الرأسية والأفقية والتجافيف.',
-      keyConcepts: [
-        { name: 'Grashof Number', eq: 'Gr_L = \\frac{g \\beta (T_s - T_\\infty) L^3}{\\nu^2}', desc: 'نسبة قوى الطفو إلى قوى اللزوجة' },
-        { name: 'Rayleigh Number', eq: 'Ra_L = Gr_L \\cdot Pr', desc: 'محدد طبيعة الجريان (صفيحي أم اضطرابي)' },
-        { name: 'Vertical Plate Nu', eq: 'Nu = \\left[0.825 + \\frac{0.387 Ra_L^{1/6}}{(1 + (0.492/Pr)^{9/16})^{8/27}}\\right]^2', desc: 'علاقة تشرشل وتشاو للألواح الرأسية' }
-      ],
-      assumptions: ['Ideal gas \\beta = 1/T_f (K)', 'Quiescent surrounding fluid'],
-      dataBookRef: 'Natural Convection Empirical Correlations'
-    },
-    {
-      id: 7,
-      title: 'Lecture 7: Internal Forced Convection',
-      arabicTitle: 'الحمل القسري الداخلي',
-      summary: 'الجريان داخل الأنابيب، طول المدخل الهيدروديناميكي والحراري، التدفق الحراري الثابت مقابل درجة الحرارة الثابتة.',
-      keyConcepts: [
-        { name: 'Laminar Tube Nu', eq: 'Nu_D = 4.36 \\text{ (q" const)}, 3.66 \\text{ (T_s const)}', desc: 'جريان مكتمل النمو صفيحي' },
-        { name: 'Dittus-Boelter', eq: 'Nu_D = 0.023 Re_D^{0.8} Pr^n', desc: 'جريان مضطرب (n=0.4 تسخين, n=0.3 تبريد)' },
-        { name: 'Mean Temp Log', eq: 'q = \\dot{m} c_p (T_{m,o} - T_{m,i})', desc: 'موازنة الطاقة الكلية للأنبوب' }
-      ],
-      assumptions: ['Re_D > 10,000 for Dittus-Boelter', '0.6 < Pr < 160'],
-      dataBookRef: 'Moody Chart, Friction factor relations'
-    },
-    {
-      id: 8,
-      title: 'Lecture 8: Radiation Heat Transfer',
-      arabicTitle: 'انتقال الحرارة بالإشعاع',
-      summary: 'إشعاع الجسم الأسود والأجسام الرمادية، معامِلات الرؤية (View Factors)، الدوائر المكافئة للإشعاع، والحواجز الإشعاعية.',
-      keyConcepts: [
-        { name: 'Stefan-Boltzmann', eq: 'E_b = \\sigma T^4', desc: 'قدرة الانبعاث للجسم الأسود' },
-        { name: 'View Factor Recip.', eq: 'A_1 F_{12} = A_2 F_{21}', desc: 'علاقة التبادلية لمعاملات الرؤية' },
-        { name: 'Radiosity Net Q', eq: 'q_{12} = \\frac{\\sigma (T_1^4 - T_2^4)}{\\frac{1-\\epsilon_1}{\\epsilon_1 A_1} + \\frac{1}{A_1 F_{12}} + \\frac{1-\\epsilon_2}{\\epsilon_2 A_2}}', desc: 'التبادل الإشعاعي بين سطحين رماديين' }
-      ],
-      assumptions: ['Diffuse, gray surfaces', 'Opaque media', 'Uniform radiosities'],
-      dataBookRef: 'View Factor Charts, Emissivity Tables'
-    },
-    {
-      id: 9,
-      title: 'Lecture 9: Heat Exchangers',
-      arabicTitle: 'المبادلات الحرارية',
-      summary: 'أنواع المبادلات، طريقة فرق درجات الحرارة اللوجاريتمي (LMTD)، طريقة الفاعلية (\\(\\varepsilon\\)-NTU)، ومعامل الاتساخ.',
-      keyConcepts: [
-        { name: 'LMTD Equation', eq: '\\Delta T_{lm} = \\frac{\\Delta T_1 - \\Delta T_2}{\\ln(\\Delta T_1 / \\Delta T_2)}', desc: 'المتوسط اللوجاريتمي لفرق الحرارة' },
-        { name: 'Effectiveness', eq: '\\varepsilon = \\frac{q}{q_{max}} = \\frac{q}{C_{min}(T_{h,in} - T_{c,in})}', desc: 'فاعلية المبادل الحراري' },
-        { name: 'NTU Definition', eq: 'NTU = \\frac{U A_s}{C_{min}}', desc: 'عدد وحدات النقل الحراري' }
-      ],
-      assumptions: ['Steady state', 'Constant overall U', 'No heat loss to surroundings'],
-      dataBookRef: 'LMTD Correction Factor Charts, NTU Effectiveness Relations'
-    }
-  ];
-
-  // --- Fin Simulator State ---
-  const [finK, setFinK] = useState(200); // Aluminum W/mK
-  const [finH, setFinH] = useState(50);  // W/m2K
-  const [finL, setFinL] = useState(0.1);  // 10 cm
-  const [finP, setFinP] = useState(0.04); // 4 cm perimeter
-  const [finAc, setFinAc] = useState(0.0001); // 1 cm2 area
-  const [finTb, setFinTb] = useState(100); // C
-  const [finTinf, setFinTinf] = useState(25); // C
-
-  // --- Fin Calculations ---
-  const m = Math.sqrt((finH * finP) / (finK * finAc));
-  const mL = m * finL;
-  const qFinInsulated = Math.sqrt(finH * finP * finK * finAc) * (finTb - finTinf) * Math.tanh(mL);
-  const etaFin = Math.tanh(mL) / mL;
-  const epsilonFin = qFinInsulated / (finH * finAc * (finTb - finTinf));
-
-  // Temp profile points
-  const finPoints = Array.from({ length: 20 }, (_, i) => {
-    const x = (i / 19) * finL;
-    const thetaX = (finTb - finTinf) * (Math.cosh(m * (finL - x)) / Math.cosh(mL));
-    return { x: x.toFixed(3), T: (thetaX + finTinf).toFixed(1) };
-  });
-
-  // --- Transient Simulator State ---
-  const [trK, setTrK] = useState(50);
-  const [trH, setTrH] = useState(100);
-  const [trRho, setTrRho] = useState(7800);
-  const [trCp, setTrCp] = useState(460);
-  const [trLc, setTrLc] = useState(0.01);
-  const [trTi, setTrTi] = useState(300);
-  const [trTinf, setTrTinf] = useState(25);
-  const [trTime, setTrTime] = useState(60);
-
-  const biNum = (trH * trLc) / trK;
-  const tau = (trRho * trLc * trCp) / trH;
-  const alpha = trK / (trRho * trCp);
-  const foNum = (alpha * trTime) / (trLc * trLc);
-  const trTempAtT = trTinf + (trTi - trTinf) * Math.exp(-trTime / tau);
-
-  const trPoints = Array.from({ length: 20 }, (_, i) => {
-    const t = (i / 19) * (tau * 3);
-    const T = trTinf + (trTi - trTinf) * Math.exp(-t / tau);
-    return { t: Math.round(t), T: T.toFixed(1) };
-  });
-
-  // --- Socratic Tutor State ---
-  const [socStep, setSocStep] = useState(1);
-  const [socUserChoice, setSocUserChoice] = useState(null);
-  const [socFeedback, setSocFeedback] = useState('');
-
-  const handleSocraticChoice = (choiceIndex, isCorrect, feedback) => {
-    setSocUserChoice(choiceIndex);
-    setSocFeedback(feedback);
-  };
-
-  // --- Data Book Air Properties State ---
-  const [airTemp, setAirTemp] = useState(300); // Kelvin
-  const getAirProperties = (T) => {
-    // Linear approximation around 300K - 400K for demo purposes
-    const rho = (1.1614 - 0.003 * (T - 300)).toFixed(3);
-    const cp = (1007 + 0.1 * (T - 300)).toFixed(0);
-    const k = (0.0263 + 0.00007 * (T - 300)).toFixed(4);
-    const nu = (15.89 + 0.1 * (T - 300)).toFixed(2);
-    const Pr = (0.707 - 0.0001 * (T - 300)).toFixed(3);
-    return { rho, cp, k, nu, Pr };
-  };
-  const airProps = getAirProperties(airTemp);
-
-  // --- Quiz Engine State ---
-  const [quizIndex, setQuizIndex] = useState(0);
-  const [quizSelectedOption, setQuizSelectedOption] = useState(null);
-  const [quizScore, setQuizScore] = useState(0);
-  const [quizSubmitted, setQuizSubmitted] = useState(false);
-
-  const quizQuestions = [
-    {
-      q: 'ما هو الشرط الهندسي الفيزيائي لتطبيق طريقة السعة المجمعة (Lumped Capacitance Method) في انتقال الحرارة غير المستقر؟',
-      options: [
-        'أن يكون رقم فوريه Fo > 1.0',
-        'أن يكون رقم بيوت Bi < 0.1',
-        'أن تكون الموصلية الحرارية k صغيرة جداً',
-        'أن تكون سرعة المائع V > 10 m/s'
-      ],
-      correct: 1,
-      explanation: 'صحيح! عندما يكون Bi = h L_c / k < 0.1، تكون المقاومة الحرارية بالتوصيل داخل الجسم مهملة مقارنة بالمقاومة بالحمل على السطح، مما يجعل توزيع الحرارة داخل الجسم متجانساً تقريباً.'
-    },
-    {
-      q: 'عند حساب نقل الحرارة بالحمل الحر (Natural Convection) على لوح رأسي، ما هو الرقم المبعد المعبر عن نسبة قوى الطفو إلى قوى اللزوجة؟',
-      options: [
-        'Reynolds Number (Re)',
-        'Prandtl Number (Pr)',
-        'Grashof Number (Gr)',
-        'Nusselt Number (Nu)'
-      ],
-      correct: 2,
-      explanation: 'ممتاز! رقم جراشوف Gr = g \\beta (T_s - T_\\infty) L^3 / \\nu^2 يقيس التوازن بين قوى الطفو الناتجة عن اختلاف الكثافة وقوى اللزوجة المعيقة للحركة.'
-    },
-    {
-      q: 'زعنفة طويلة جداً (Infinitely Long Fin) ذات مقطع ثابت، ما هي كفاءتها النظرية \\(\\eta_f\\) إذا كان \\(mL = 2.0\\)؟',
-      options: [
-        '100%',
-        '50%',
-        '48.2%',
-        '33.3%'
-      ],
-      correct: 2,
-      explanation: 'أحسنت! لحساب كفاءة الزعنفة المقفلة أو الطويلة، \\(\\eta_f = \\tanh(mL) / mL\\). بالتعويض: \\(\\tanh(2.0)/2.0 = 0.964 / 2.0 = 0.482\\) أي 48.2%.'
-    }
-  ];
-
-  const handleQuizAnswer = (optIndex) => {
-    if (quizSubmitted) return;
-    setQuizSelectedOption(optIndex);
-  };
-
-  const submitQuizAnswer = () => {
-    if (quizSelectedOption === null) return;
-    setQuizSubmitted(true);
-    if (quizSelectedOption === quizQuestions[quizIndex].correct) {
-      setQuizScore(quizScore + 1);
-    }
-  };
-
-  const nextQuizQuestion = () => {
-    setQuizSelectedOption(null);
-    setQuizSubmitted(false);
-    if (quizIndex < quizQuestions.length - 1) {
-      setQuizIndex(quizIndex + 1);
-    } else {
-      alert(`أكملت الاختبار! نتيجتك: ${quizScore + (quizSelectedOption === quizQuestions[quizIndex].correct ? 1 : 0)} من ${quizQuestions.length}`);
-      setQuizIndex(0);
-      setQuizScore(0);
-    }
-  };
-
-  return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 font-sans dir-rtl" dir="rtl">
-      
-      {/* Header Banner */}
-      <header className="border-b border-slate-800 bg-slate-900/80 backdrop-blur sticky top-0 z-50">
-        <div className="max-w-7xl mx-auto px-4 py-3 flex flex-wrap justify-between items-center gap-4">
-          <div className="flex items-center space-x-3 space-x-reverse">
-            <div className="bg-gradient-to-tr from-amber-500 to-orange-600 p-2.5 rounded-xl text-slate-950 shadow-lg shadow-orange-500/20">
-              <Flame size={28} className="animate-pulse" />
-            </div>
-            <div>
-              <h1 className="text-xl font-bold bg-gradient-to-r from-amber-400 via-orange-300 to-amber-200 bg-clip-text text-transparent">
-                مستكشف انتقال الحرارة | Heat Transfer Explorer
-              </h1>
-              <p className="text-xs text-slate-400">المنصة الهندسية التفاعلية للمنهج الجامعي وسجل البيانات (Data Book)</p>
-            </div>
-          </div>
-
-          {/* Navigation Tabs */}
-          <nav className="flex items-center gap-1 bg-slate-800/80 p-1 rounded-xl border border-slate-700/60 overflow-x-auto max-w-full">
-            <button
-              onClick={() => setActiveTab('curriculum')}
-              className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-medium transition-all ${
-                activeTab === 'curriculum'
-                  ? 'bg-orange-500 text-slate-950 shadow-md font-semibold'
-                  : 'text-slate-300 hover:bg-slate-700/50'
-              }`}
-            >
-              <BookOpen size={15} />
-              المنهج الدراسي (Lectures)
-            </button>
-            <button
-              onClick={() => setActiveTab('simulators')}
-              className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-medium transition-all ${
-                activeTab === 'simulators'
-                  ? 'bg-orange-500 text-slate-950 shadow-md font-semibold'
-                  : 'text-slate-300 hover:bg-slate-700/50'
-              }`}
-            >
-              <Activity size={15} />
-              المحاكيات التفاعلية
-            </button>
-            <button
-              onClick={() => setActiveTab('databook')}
-              className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-medium transition-all ${
-                activeTab === 'databook'
-                  ? 'bg-orange-500 text-slate-950 shadow-md font-semibold'
-                  : 'text-slate-300 hover:bg-slate-700/50'
-              }`}
-            >
-              <Layers size={15} />
-              سجل البيانات (Data Book)
-            </button>
-            <button
-              onClick={() => setActiveTab('socratic')}
-              className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-medium transition-all ${
-                activeTab === 'socratic'
-                  ? 'bg-orange-500 text-slate-950 shadow-md font-semibold'
-                  : 'text-slate-300 hover:bg-slate-700/50'
-              }`}
-            >
-              <HelpCircle size={15} />
-              المعلم السقراطي
-            </button>
-            <button
-              onClick={() => setActiveTab('quiz')}
-              className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-medium transition-all ${
-                activeTab === 'quiz'
-                  ? 'bg-orange-500 text-slate-950 shadow-md font-semibold'
-                  : 'text-slate-300 hover:bg-slate-700/50'
-              }`}
-            >
-              <Award size={15} />
-              مختبر الاختبارات
-            </button>
-          </nav>
-        </div>
-      </header>
-
-      {/* Main Content Area */}
-      <main className="max-w-7xl mx-auto px-4 py-6">
-
-        {/* ================= TAB 1: CURRICULUM OVERVIEW ================= */}
-        {activeTab === 'curriculum' && (
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-            
-            {/* Lecture Selection Sidebar */}
-            <div className="lg:col-span-4 bg-slate-900 border border-slate-800 rounded-2xl p-4 shadow-xl">
-              <h2 className="text-sm font-bold text-slate-300 mb-3 flex items-center gap-2 border-b border-slate-800 pb-2">
-                <BookOpen size={18} className="text-orange-400" />
-                محاضرات المنهج (Lectures 1 - 9)
-              </h2>
-              <div className="space-y-2 max-h-[600px] overflow-y-auto pr-1">
-                {lectures.map((lect) => (
-                  <button
-                    key={lect.id}
-                    onClick={() => setSelectedLecture(lect.id)}
-                    className={`w-full text-right p-3 rounded-xl border transition-all flex flex-col gap-1 ${
-                      selectedLecture === lect.id
-                        ? 'bg-orange-500/10 border-orange-500/50 text-orange-200'
-                        : 'bg-slate-800/40 border-slate-800 text-slate-400 hover:border-slate-700 hover:text-slate-200'
-                    }`}
-                  >
-                    <div className="flex justify-between items-center">
-                      <span className="text-xs font-bold text-orange-400">Lecture {lect.id}</span>
-                      <span className="text-[10px] bg-slate-800 px-2 py-0.5 rounded text-slate-400">
-                        {lect.assumptions.length} الفروض الرئيسية
-                      </span>
-                    </div>
-                    <div className="text-sm font-semibold text-slate-100">{lect.arabicTitle}</div>
-                    <div className="text-xs text-slate-400 line-clamp-1">{lect.title}</div>
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* Selected Lecture Detailed View */}
-            <div className="lg:col-span-8 space-y-6">
-              {(() => {
-                const current = lectures.find((l) => l.id === selectedLecture);
-                return (
-                  <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl space-y-6">
-                    <div className="border-b border-slate-800 pb-4">
-                      <span className="text-xs font-bold text-orange-400 bg-orange-500/10 border border-orange-500/20 px-3 py-1 rounded-full">
-                        {current.title}
-                      </span>
-                      <h2 className="text-2xl font-bold text-slate-100 mt-2">{current.arabicTitle}</h2>
-                      <p className="text-sm text-slate-400 mt-1">{current.summary}</p>
-                    </div>
-
-                    {/* Key Concepts & Equations */}
-                    <div>
-                      <h3 className="text-md font-bold text-slate-200 mb-3 flex items-center gap-2">
-                        <Zap size={18} className="text-amber-400" />
-                        المفاهيم والمعادلات الحاكمة (Governing Equations)
-                      </h3>
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        {current.keyConcepts.map((concept, idx) => (
-                          <div key={idx} className="bg-slate-950 border border-slate-800 p-4 rounded-xl space-y-2">
-                            <div className="text-xs font-bold text-orange-300">{concept.name}</div>
-                            <div className="bg-slate-900 p-2.5 rounded-lg font-mono text-xs text-emerald-400 text-center dir-ltr border border-slate-800">
-                              {concept.eq}
-                            </div>
-                            <div className="text-xs text-slate-400">{concept.desc}</div>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-
-                    {/* Engineering Assumptions & Data Book Cross Reference */}
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
-                      <div className="bg-slate-950/60 border border-slate-800/80 p-4 rounded-xl space-y-2">
-                        <h4 className="text-xs font-bold text-slate-300 flex items-center gap-1.5">
-                          <CheckCircle2 size={15} className="text-emerald-400" />
-                          الافتراضات الهندسية الشائعة (Assumptions)
-                        </h4>
-                        <ul className="text-xs text-slate-400 space-y-1 list-disc list-inside">
-                          {current.assumptions.map((asm, i) => (
-                            <li key={i}>{asm}</li>
-                          ))}
-                        </ul>
-                      </div>
-
-                      <div className="bg-slate-950/60 border border-slate-800/80 p-4 rounded-xl space-y-2">
-                        <h4 className="text-xs font-bold text-slate-300 flex items-center gap-1.5">
-                          <Layers size={15} className="text-sky-400" />
-                          مرجع جدول البيانات (Data Book Ref)
-                        </h4>
-                        <p className="text-xs text-sky-300 font-mono bg-sky-950/40 p-2 rounded border border-sky-900/50">
-                          {current.dataBookRef}
-                        </p>
-                      </div>
-                    </div>
-
-                  </div>
-                );
-              })()}
-            </div>
-
-          </div>
-        )}
-
-        {/* ================= TAB 2: INTERACTIVE SIMULATORS ================= */}
-        {activeTab === 'simulators' && (
-          <div className="space-y-6">
-            
-            {/* Simulator Type Switcher */}
-            <div className="flex gap-2 border-b border-slate-800 pb-3">
-              <button
-                onClick={() => setSimType('fin')}
-                className={`px-4 py-2 rounded-xl text-xs font-bold transition-all ${
-                  simType === 'fin'
-                    ? 'bg-orange-500 text-slate-950'
-                    : 'bg-slate-900 text-slate-400 hover:text-slate-200'
-                }`}
-              >
-                محاكاة الزعنفة الحرارية (Fin Analysis - Lecture 3)
-              </button>
-              <button
-                onClick={() => setSimType('transient')}
-                className={`px-4 py-2 rounded-xl text-xs font-bold transition-all ${
-                  simType === 'transient'
-                    ? 'bg-orange-500 text-slate-950'
-                    : 'bg-slate-900 text-slate-400 hover:text-slate-200'
-                }`}
-              >
-                الحرارة غير المستقرة والسعة المجمعة (Transient Conduction - Lecture 4)
-              </button>
-            </div>
-
-            {/* SIMULATOR 1: FIN HEAT TRANSFER */}
-            {simType === 'fin' && (
-              <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-                
-                {/* Inputs Column */}
-                <div className="lg:col-span-5 bg-slate-900 border border-slate-800 p-5 rounded-2xl space-y-4 shadow-xl">
-                  <h3 className="text-sm font-bold text-orange-400 border-b border-slate-800 pb-2 flex items-center gap-2">
-                    <Gauge size={18} />
-                    مدخلات محاكاة الزعنفة (Fin Inputs)
-                  </h3>
-
-                  <div className="space-y-3 text-xs">
-                    <div>
-                      <div className="flex justify-between text-slate-300 mb-1">
-                        <span>الموصلية الحرارية للزعنفة \\(k\\) [W/m·K]:</span>
-                        <span className="font-mono text-orange-400">{finK}</span>
-                      </div>
-                      <input
-                        type="range"
-                        min="10"
-                        max="400"
-                        value={finK}
-                        onChange={(e) => setFinK(Number(e.target.value))}
-                        className="w-full accent-orange-500"
-                      />
-                    </div>
-
-                    <div>
-                      <div className="flex justify-between text-slate-300 mb-1">
-                        <span>معامل الحمل الحراري \\(h\\) [W/m²·K]:</span>
-                        <span className="font-mono text-orange-400">{finH}</span>
-                      </div>
-                      <input
-                        type="range"
-                        min="5"
-                        max="200"
-                        value={finH}
-                        onChange={(e) => setFinH(Number(e.target.value))}
-                        className="w-full accent-orange-500"
-                      />
-                    </div>
-
-                    <div>
-                      <div className="flex justify-between text-slate-300 mb-1">
-                        <span>طول الزعنفة \\(L\\) [m]:</span>
-                        <span className="font-mono text-orange-400">{finL}</span>
-                      </div>
-                      <input
-                        type="range"
-                        min="0.02"
-                        max="0.5"
-                        step="0.01"
-                        value={finL}
-                        onChange={(e) => setFinL(Number(e.target.value))}
-                        className="w-full accent-orange-500"
-                      />
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-3 pt-2 border-t border-slate-800">
-                      <div>
-                        <label className="block text-slate-400 mb-1">درجة حرارة القاعدة \\(T_b\\) (°C):</label>
-                        <input
-                          type="number"
-                          value={finTb}
-                          onChange={(e) => setFinTb(Number(e.target.value))}
-                          className="w-full bg-slate-950 border border-slate-800 rounded p-1.5 font-mono text-orange-300"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-slate-400 mb-1">حرارة المائع المحيط \\(T_\\infty\\) (°C):</label>
-                        <input
-                          type="number"
-                          value={finTinf}
-                          onChange={(e) => setFinTinf(Number(e.target.value))}
-                          className="w-full bg-slate-950 border border-slate-800 rounded p-1.5 font-mono text-orange-300"
-                        />
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Calculated Results Box */}
-                  <div className="bg-slate-950 border border-slate-800 p-4 rounded-xl space-y-2 text-xs">
-                    <div className="font-bold text-slate-200 border-b border-slate-800 pb-1">النتائج المحسوبة:</div>
-                    <div className="flex justify-between">
-                      <span className="text-slate-400">معامل الزعنفة \\(m\\):</span>
-                      <span className="font-mono text-emerald-400">{m.toFixed(2)} m⁻¹</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-slate-400">المقدار \\(m L\\):</span>
-                      <span className="font-mono text-emerald-400">{mL.toFixed(3)}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-slate-400">معدل نقل الحرارة \\(q_f\\):</span>
-                      <span className="font-mono text-amber-400">{qFinInsulated.toFixed(2)} W</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-slate-400">كفاءة الزعنفة \\(\\eta_f\\):</span>
-                      <span className="font-mono text-sky-400">{(etaFin * 100).toFixed(1)}%</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-slate-400">فاعلية الزعنفة \\(\\varepsilon_f\\):</span>
-                      <span className="font-mono text-indigo-400">{epsilonFin.toFixed(2)}</span>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Plot Column */}
-                <div className="lg:col-span-7 bg-slate-900 border border-slate-800 p-5 rounded-2xl space-y-4 shadow-xl">
-                  <h3 className="text-sm font-bold text-slate-200 flex items-center justify-between">
-                    <span>مخطط توزيع الحرارة على طول الزعنفة \\(T(x)\\)</span>
-                    <span className="text-xs text-slate-400 font-normal">الحالة: طرف معزول (Insulated Tip)</span>
-                  </h3>
-
-                  {/* SVG Line Chart */}
-                  <div className="bg-slate-950 border border-slate-800 p-4 rounded-xl h-64 flex flex-col justify-between relative">
-                    <svg className="w-full h-48 overflow-visible">
-                      {/* Grid lines */}
-                      <line x1="0" y1="0" x2="100%" y2="0" stroke="#334155" strokeDasharray="4" />
-                      <line x1="0" y1="50%" x2="100%" y2="50%" stroke="#334155" strokeDasharray="4" />
-                      <line x1="0" y1="100%" x2="100%" y2="100%" stroke="#334155" />
-
-                      {/* Temperature Curve */}
-                      <path
-                        d={finPoints.reduce((acc, point, idx) => {
-                          const xPct = (idx / (finPoints.length - 1)) * 100;
-                          // Scale T between Tinf and Tb
-                          const tNum = parseFloat(point.T);
-                          const yPct = 100 - ((tNum - finTinf) / (finTb - finTinf)) * 100;
-                          return `${acc} ${idx === 0 ? 'M' : 'L'} ${xPct}% ${yPct}%`;
-                        }, '')}
-                        fill="none"
-                        stroke="#f97316"
-                        strokeWidth="3"
-                      />
-                    </svg>
-
-                    <div className="flex justify-between text-[10px] text-slate-500 pt-2 border-t border-slate-800">
-                      <span>القاعدة x = 0 (T = {finTb}°C)</span>
-                      <span>طول الزعنفة x = {finL}m</span>
-                      <span>الطرف x = L (T = {finPoints[finPoints.length - 1].T}°C)</span>
-                    </div>
-                  </div>
-
-                  <div className="bg-slate-950/40 p-3 rounded-xl border border-slate-800 text-xs text-slate-400">
-                    <span className="text-orange-400 font-bold">توجيه أستاذ المادة:</span> لاحظ أنه كلما زادت قيمة الموصلية الحرارية \\(k\\)، يقل الانحدار الحراري ويصبح الطرف أكثر سخونة، مما يرفع من كفاءة الزعنفة \\(\\eta_f\\).
-                  </div>
-                </div>
-
-              </div>
-            )}
-
-            {/* SIMULATOR 2: TRANSIENT HEAT CONDUCTION */}
-            {simType === 'transient' && (
-              <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-                
-                {/* Inputs Column */}
-                <div className="lg:col-span-5 bg-slate-900 border border-slate-800 p-5 rounded-2xl space-y-4 shadow-xl">
-                  <h3 className="text-sm font-bold text-orange-400 border-b border-slate-800 pb-2 flex items-center gap-2">
-                    <Thermometer size={18} />
-                    مدخلات السعة المجمعة (Lumped System Inputs)
-                  </h3>
-
-                  <div className="space-y-3 text-xs">
-                    <div>
-                      <div className="flex justify-between text-slate-300 mb-1">
-                        <span>معامل الحمل الحراري \\(h\\) [W/m²·K]:</span>
-                        <span className="font-mono text-orange-400">{trH}</span>
-                      </div>
-                      <input
-                        type="range"
-                        min="10"
-                        max="500"
-                        value={trH}
-                        onChange={(e) => setTrH(Number(e.target.value))}
-                        className="w-full accent-orange-500"
-                      />
-                    </div>
-
-                    <div>
-                      <div className="flex justify-between text-slate-300 mb-1">
-                        <span>الطول المميز \\(L_c = V/A_s\\) [m]:</span>
-                        <span className="font-mono text-orange-400">{trLc}</span>
-                      </div>
-                      <input
-                        type="range"
-                        min="0.001"
-                        max="0.05"
-                        step="0.001"
-                        value={trLc}
-                        onChange={(e) => setTrLc(Number(e.target.value))}
-                        className="w-full accent-orange-500"
-                      />
-                    </div>
-
-                    <div>
-                      <div className="flex justify-between text-slate-300 mb-1">
-                        <span>الزمن المستغرق \\(t\\) [seconds]:</span>
-                        <span className="font-mono text-orange-400">{trTime} s</span>
-                      </div>
-                      <input
-                        type="range"
-                        min="1"
-                        max="300"
-                        value={trTime}
-                        onChange={(e) => setTrTime(Number(e.target.value))}
-                        className="w-full accent-orange-500"
-                      />
-                    </div>
-                  </div>
-
-                  {/* Biot Number Check Box */}
-                  <div className="bg-slate-950 border border-slate-800 p-4 rounded-xl space-y-2 text-xs">
-                    <div className="font-bold text-slate-200 border-b border-slate-800 pb-1">تحليل رقم بيوت (Biot Number Check):</div>
-                    <div className="flex justify-between">
-                      <span className="text-slate-400">رقم بيوت \\(Bi = h L_c / k\\):</span>
-                      <span className={`font-mono font-bold ${biNum < 0.1 ? 'text-emerald-400' : 'text-rose-400'}`}>
-                        {biNum.toFixed(4)}
-                      </span>
-                    </div>
-                    <div className="text-[11px] p-2 rounded bg-slate-900 border border-slate-800">
-                      {biNum < 0.1 ? (
-                        <span className="text-emerald-400 font-semibold">
-                          ✓ الشرط متوفر (Bi &lt; 0.1): طريقة السعة المجمعة دقيقة ومقبولة!
-                        </span>
-                      ) : (
-                        <span className="text-rose-400 font-semibold">
-                          ✕ الشرط غير متوفر (Bi &gt; 0.1): يوجد تدرج حراري داخلي، يلزم استخدام مخططات هايسلر (Heisler Charts).
-                        </span>
-                      )}
-                    </div>
-                    <div className="flex justify-between pt-1">
-                      <span className="text-slate-400">الثابت الزمني \\(\\tau\\):</span>
-                      <span className="font-mono text-amber-400">{tau.toFixed(1)} seconds</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-slate-400">الحرارة عند الزمن t:</span>
-                      <span className="font-mono text-sky-400">{trTempAtT.toFixed(1)} °C</span>
-                    </div>
-                  </div>
-
-                </div>
-
-                {/* Plot Column */}
-                <div className="lg:col-span-7 bg-slate-900 border border-slate-800 p-5 rounded-2xl space-y-4 shadow-xl">
-                  <h3 className="text-sm font-bold text-slate-200">
-                    منحنى التبريد الزمني exponential decay curve \\(T(t)\\)
-                  </h3>
-
-                  <div className="bg-slate-950 border border-slate-800 p-4 rounded-xl h-64 flex flex-col justify-between">
-                    <svg className="w-full h-48 overflow-visible">
-                      <line x1="0" y1="0" x2="100%" y2="0" stroke="#334155" strokeDasharray="4" />
-                      <line x1="0" y1="100%" x2="100%" y2="100%" stroke="#334155" />
-
-                      <path
-                        d={trPoints.reduce((acc, point, idx) => {
-                          const xPct = (idx / (trPoints.length - 1)) * 100;
-                          const tNum = parseFloat(point.T);
-                          const yPct = 100 - ((tNum - trTinf) / (trTi - trTinf)) * 100;
-                          return `${acc} ${idx === 0 ? 'M' : 'L'} ${xPct}% ${yPct}%`;
-                        }, '')}
-                        fill="none"
-                        stroke="#38bdf8"
-                        strokeWidth="3"
-                      />
-                    </svg>
-
-                    <div className="flex justify-between text-[10px] text-slate-500 pt-2 border-t border-slate-800">
-                      <span>الزمن t = 0 (T = {trTi}°C)</span>
-                      <span>t = {trTime}s (T = {trTempAtT.toFixed(1)}°C)</span>
-                      <span>الاستقرار t → ∞ (T = {trTinf}°C)</span>
-                    </div>
-                  </div>
-                </div>
-
-              </div>
-            )}
-
-          </div>
-        )}
-
-        {/* ================= TAB 3: DATA BOOK LOOKUP ================= */}
-        {activeTab === 'databook' && (
-          <div className="space-y-6">
-            <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl space-y-6">
-              
-              <div className="flex justify-between items-center border-b border-slate-800 pb-4">
-                <div>
-                  <h2 className="text-lg font-bold text-slate-100 flex items-center gap-2">
-                    <Layers className="text-orange-400" size={22} />
-                    سجل البيانات الهندسية (Interactive Data Book)
-                  </h2>
-                  <p className="text-xs text-slate-400">خواص الهواء والماء وتقييم الخواص عند درجة حرارة الفيلم (Film Temperature \\(T_f\\))</p>
-                </div>
-              </div>
-
-              {/* Air Thermophysical Properties Calculator */}
-              <div className="bg-slate-950 border border-slate-800 p-5 rounded-xl space-y-4">
-                <h3 className="text-sm font-bold text-orange-300">
-                  خواص الهواء الجاف عند الضغط الجوي (Air Properties at 1 atm)
-                </h3>
-
-                <div className="flex items-center gap-4 text-xs">
-                  <label className="text-slate-300">درجة حرارة الفيلم \\(T_f\\) (Kelvin):</label>
-                  <input
-                    type="range"
-                    min="250"
-                    max="500"
-                    value={airTemp}
-                    onChange={(e) => setAirTemp(Number(e.target.value))}
-                    className="w-48 accent-orange-500"
-                  />
-                  <span className="font-mono text-orange-400 font-bold">{airTemp} K ({airTemp - 273}°C)</span>
-                </div>
-
-                <div className="grid grid-cols-2 md:grid-cols-5 gap-3 pt-2">
-                  <div className="bg-slate-900 p-3 rounded-lg border border-slate-800 text-center">
-                    <div className="text-[10px] text-slate-400">الكثافة \\(\\rho\\)</div>
-                    <div className="text-sm font-mono text-emerald-400 font-bold">{airProps.rho}</div>
-                    <div className="text-[9px] text-slate-500">kg/m³</div>
-                  </div>
-                  <div className="bg-slate-900 p-3 rounded-lg border border-slate-800 text-center">
-                    <div className="text-[10px] text-slate-400">الحرارة النوعية \\(c_p\\)</div>
-                    <div className="text-sm font-mono text-emerald-400 font-bold">{airProps.cp}</div>
-                    <div className="text-[9px] text-slate-500">J/kg·K</div>
-                  </div>
-                  <div className="bg-slate-900 p-3 rounded-lg border border-slate-800 text-center">
-                    <div className="text-[10px] text-slate-400">الموصلية \\(k\\)</div>
-                    <div className="text-sm font-mono text-emerald-400 font-bold">{airProps.k}</div>
-                    <div className="text-[9px] text-slate-500">W/m·K</div>
-                  </div>
-                  <div className="bg-slate-900 p-3 rounded-lg border border-slate-800 text-center">
-                    <div className="text-[10px] text-slate-400">اللزوجة الحركية \\(\\nu\\)</div>
-                    <div className="text-sm font-mono text-emerald-400 font-bold">{airProps.nu} ×10⁻⁶</div>
-                    <div className="text-[9px] text-slate-500">m²/s</div>
-                  </div>
-                  <div className="bg-slate-900 p-3 rounded-lg border border-slate-800 text-center">
-                    <div className="text-[10px] text-slate-400">رقم برانتل \\(Pr\\)</div>
-                    <div className="text-sm font-mono text-amber-400 font-bold">{airProps.Pr}</div>
-                    <div className="text-[9px] text-slate-500">Dimensionless</div>
-                  </div>
-                </div>
-              </div>
-
-            </div>
-          </div>
-        )}
-
-        {/* ================= TAB 4: SOCRATIC TUTOR ================= */}
-        {activeTab === 'socratic' && (
-          <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl space-y-6">
-            <div className="border-b border-slate-800 pb-4">
-              <span className="text-xs font-bold text-emerald-400 bg-emerald-500/10 px-3 py-1 rounded-full border border-emerald-500/20">
-                طريقة التفكير الهندسي السقراطي (Socratic Method)
-              </span>
-              <h2 className="text-xl font-bold text-slate-100 mt-2">مسألة تفاعلية موجهة: تصميم المبرد الحراري لرقاقة إلكترونية</h2>
-              <p className="text-xs text-slate-400">سيقوم المعلم بطرح أسئلة متدرجة لتصل بنفسك إلى الحل الصحيح دون إعطاء إجابات جاهزة.</p>
-            </div>
-
-            {/* Step 1 */}
-            {socStep === 1 && (
-              <div className="bg-slate-950 border border-slate-800 p-5 rounded-xl space-y-4">
-                <div className="text-xs text-orange-400 font-bold">الخطوة 1: تحديد آليات نقل الحرارة الحاكمة</div>
-                <p className="text-sm text-slate-200">
-                  لدينا رقاقة إلكترونية تُولد حرارة بقدرة 15 واط، ويتصل بها مبرد ألومنيوم (Heat Sink) مزود بزعانف ومحاط بهواء متحرك بوساطة مروحة. ما هي آليات نقل الحرارة التراكمية في هذا النظام؟
-                </p>
-
-                <div className="space-y-2 text-xs">
-                  {[
-                    { text: 'توصيل داخل الرقاقة والزعنفة + حمل حراري قسري مع الهواء', correct: true, fb: 'إجابة ممتازة! التوصيل ينقل الحرارة عبر معدن الزعنفة، والحمل القسري ينقلها للهواء المتحرك بفعل المروحة.' },
-                    { text: 'إشعاع حراري فقط', correct: false, fb: 'تذكر أن وجود مروحة يجعل الحمل القسري هو الآلية السائدة لنقل الحرارة.' },
-                    { text: 'حمل حر طبيعي فقط', correct: false, fb: 'وجود المروحة يحول الحمل من حر (Natural) إلى قسري (Forced).' }
-                  ].map((opt, idx) => (
-                    <button
-                      key={idx}
-                      onClick={() => handleSocraticChoice(idx, opt.correct, opt.fb)}
-                      className={`w-full text-right p-3 rounded-lg border transition-all ${
-                        socUserChoice === idx
-                          ? opt.correct
-                            ? 'bg-emerald-500/10 border-emerald-500 text-emerald-300'
-                            : 'bg-rose-500/10 border-rose-500 text-rose-300'
-                          : 'bg-slate-900 border-slate-800 text-slate-300 hover:border-slate-700'
-                      }`}
-                    >
-                      {opt.text}
-                    </button>
-                  ))}
-                </div>
-
-                {socFeedback && (
-                  <div className="p-3 bg-slate-900 rounded-lg border border-slate-800 text-xs text-slate-300">
-                    {socFeedback}
-                  </div>
-                )}
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* ================= TAB 5: QUIZ ENGINE ================= */}
-        {activeTab === 'quiz' && (
-          <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl space-y-6">
-            <div className="flex justify-between items-center border-b border-slate-800 pb-4">
-              <div>
-                <h2 className="text-lg font-bold text-slate-100">مختبر تقييم المفاهيم الهندسية (Quiz Laboratory)</h2>
-                <p className="text-xs text-slate-400">اختبر فهمك الأكاديمي لمواضيع المنهج من المحاضرة 1 إلى 9</p>
-              </div>
-              <div className="text-xs font-mono bg-slate-800 px-3 py-1.5 rounded-lg text-orange-400">
-                السؤال {quizIndex + 1} من {quizQuestions.length}
-              </div>
-            </div>
-
-            {/* Question Card */}
-            <div className="bg-slate-950 border border-slate-800 p-5 rounded-xl space-y-4">
-              <h3 className="text-sm font-bold text-slate-200">{quizQuestions[quizIndex].q}</h3>
-
-              <div className="space-y-2 text-xs">
-                {quizQuestions[quizIndex].options.map((opt, idx) => (
-                  <button
-                    key={idx}
-                    onClick={() => handleQuizAnswer(idx)}
-                    className={`w-full text-right p-3 rounded-lg border transition-all ${
-                      quizSelectedOption === idx
-                        ? 'bg-orange-500/20 border-orange-500 text-orange-200 font-bold'
-                        : 'bg-slate-900 border-slate-800 text-slate-300 hover:border-slate-700'
-                    }`}
-                  >
-                    {opt}
-                  </button>
-                ))}
-              </div>
-
-              {!quizSubmitted ? (
-                <button
-                  onClick={submitQuizAnswer}
-                  disabled={quizSelectedOption === null}
-                  className="px-5 py-2 bg-orange-500 text-slate-950 rounded-lg text-xs font-bold disabled:opacity-50"
-                >
-                  تأكيد الإجابة
-                </button>
-              ) : (
-                <div className="space-y-3 pt-2">
-                  <div className={`p-3 rounded-lg text-xs border ${
-                    quizSelectedOption === quizQuestions[quizIndex].correct
-                      ? 'bg-emerald-500/10 border-emerald-500 text-emerald-300'
-                      : 'bg-rose-500/10 border-rose-500 text-rose-300'
-                  }`}>
-                    {quizQuestions[quizIndex].explanation}
-                  </div>
-                  <button
-                    onClick={nextQuizQuestion}
-                    className="px-5 py-2 bg-slate-800 hover:bg-slate-700 text-slate-100 rounded-lg text-xs font-bold"
-                  >
-                    السؤال التالي
-                  </button>
-                </div>
-              )}
-            </div>
-          </div>
-        )}
-
-      </main>
-
-      {/* Footer */}
-      <footer className="border-t border-slate-800 bg-slate-900/40 mt-12 py-4 text-center text-xs text-slate-500">
-        منصة "مستكشف انتقال الحرارة" | Heat Transfer Explorer &copy; 2026 - صُممت خصيصاً لطلاب الميكانيكا والهندسة
-      </footer>
-    </div>
-  );
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>مستكشف انتقال الحرارة | Heat Transfer Explorer</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fontsource/cairo@5.0.8/400.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fontsource/cairo@5.0.8/600.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fontsource/cairo@5.0.8/700.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fontsource/cairo@5.0.8/900.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<style>
+:root{
+  --bg:#070c18; --bg2:#0b1226; --card:#101a33; --card2:#0d1730; --line:rgba(148,163,184,.16);
+  --txt:#e6edf9; --mut:#8fa3c8; --hot:#f59e0b; --hot2:#ef4444; --cold:#22d3ee; --ok:#34d399; --bad:#f87171;
+  --grad:linear-gradient(135deg,#f59e0b,#ef4444);
 }
+*{margin:0;padding:0;box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{font-family:'Cairo',sans-serif;background:var(--bg);color:var(--txt);min-height:100vh;
+  background-image:radial-gradient(1000px 500px at 90% -10%,rgba(239,68,68,.10),transparent),
+  radial-gradient(800px 500px at 0% 110%,rgba(34,211,238,.07),transparent);}
+/* ---------- topbar ---------- */
+.topbar{position:sticky;top:0;z-index:50;display:flex;align-items:center;gap:14px;
+  padding:12px 22px;background:rgba(7,12,24,.85);backdrop-filter:blur(12px);border-bottom:1px solid var(--line)}
+.logo{width:44px;height:44px;border-radius:12px;background:var(--grad);display:grid;place-items:center;font-size:22px;box-shadow:0 6px 20px rgba(239,68,68,.35)}
+.topbar h1{font-size:19px;font-weight:900}
+.topbar h1 span{background:var(--grad);-webkit-background-clip:text;background-clip:text;color:transparent}
+.topbar small{display:block;color:var(--mut);font-size:11px;letter-spacing:.5px;direction:ltr;text-align:right}
+.topbar .grow{flex:1}
+.sigma{font-size:11px;color:var(--mut);background:var(--card);border:1px solid var(--line);padding:6px 12px;border-radius:999px;direction:ltr}
+/* ---------- layout ---------- */
+.wrap{display:flex;gap:0;align-items:flex-start}
+aside{width:250px;flex-shrink:0;position:sticky;top:69px;max-height:calc(100vh - 69px);overflow-y:auto;
+  padding:16px 12px;border-inline-end:1px solid var(--line)}
+.side-item{display:flex;align-items:center;gap:10px;width:100%;text-align:right;background:none;border:1px solid transparent;
+  color:var(--mut);padding:10px 12px;border-radius:12px;cursor:pointer;font-family:'Cairo';font-size:13px;font-weight:600;transition:.25s;margin-bottom:4px}
+.side-item .num{width:26px;height:26px;border-radius:8px;background:var(--card);border:1px solid var(--line);display:grid;place-items:center;font-size:11px;flex-shrink:0}
+.side-item:hover{color:var(--txt);background:var(--card);transform:translateX(-3px)}
+.side-item.sel{color:#fff;background:linear-gradient(135deg,rgba(245,158,11,.16),rgba(239,68,68,.14));border-color:rgba(245,158,11,.4)}
+.side-item.sel .num{background:var(--grad);border:none;color:#fff}
+main{flex:1;min-width:0;padding:22px 26px 60px}
+/* ---------- hero ---------- */
+.hero{display:none}
+.hero.active{display:block;animation:fade .5s ease}
+.hero-banner{position:relative;border-radius:22px;overflow:hidden;border:1px solid var(--line);height:320px}
+.hero-banner img{width:100%;height:100%;object-fit:cover;opacity:.9}
+.hero-banner .ov{position:absolute;inset:0;background:linear-gradient(to top,rgba(7,12,24,.96) 8%,rgba(7,12,24,.35) 55%,rgba(7,12,24,.15));display:flex;flex-direction:column;justify-content:flex-end;padding:28px}
+.hero-banner h2{font-size:34px;font-weight:900;line-height:1.25}
+.hero-banner h2 b{background:var(--grad);-webkit-background-clip:text;background-clip:text;color:transparent}
+.hero-banner p{color:var(--mut);max-width:760px;font-size:14px;margin-top:6px}
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-top:18px}
+.stat{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:14px;text-align:center;transition:.25s}
+.stat:hover{transform:translateY(-3px);border-color:rgba(245,158,11,.4)}
+.stat b{font-size:24px;font-weight:900;background:var(--grad);-webkit-background-clip:text;background-clip:text;color:transparent;display:block}
+.stat span{font-size:12px;color:var(--mut)}
+.chips{display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin-top:18px}
+.chip{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:12px;cursor:pointer;transition:.25s;text-align:right}
+.chip:hover{transform:translateY(-3px);border-color:rgba(34,211,238,.45);box-shadow:0 10px 26px rgba(0,0,0,.35)}
+.chip .ic{font-size:20px}
+.chip b{display:block;font-size:13px;margin-top:4px}
+.chip small{color:var(--mut);font-size:10.5px;direction:ltr;display:block;text-align:right}
+/* ---------- modules ---------- */
+.module{display:none}
+.module.active{display:block;animation:fade .5s ease}
+@keyframes fade{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
+.mod-head{display:flex;gap:16px;align-items:center;margin-bottom:16px}
+.mod-num{width:56px;height:56px;border-radius:16px;background:var(--grad);display:grid;place-items:center;font-size:24px;font-weight:900;color:#fff;box-shadow:0 8px 24px rgba(239,68,68,.35);flex-shrink:0}
+.mod-head h2{font-size:24px;font-weight:900}
+.mod-head .en{color:var(--mut);font-size:12px;direction:ltr;text-align:right;letter-spacing:.6px}
+.objs{display:flex;flex-wrap:wrap;gap:8px;margin:10px 0 18px}
+.obj{font-size:11.5px;color:var(--cold);background:rgba(34,211,238,.08);border:1px solid rgba(34,211,238,.25);padding:5px 12px;border-radius:999px}
+.idea{background:linear-gradient(135deg,rgba(245,158,11,.08),rgba(34,211,238,.05));border:1px solid var(--line);border-radius:18px;padding:18px 20px;margin-bottom:18px;font-size:14.5px;line-height:2}
+.idea b{color:var(--hot)}
+.idea .en{color:var(--cold);font-size:12px}
+.fig{border-radius:16px;overflow:hidden;border:1px solid var(--line);margin-bottom:18px;max-height:260px}
+.fig img{width:100%;height:100%;object-fit:cover;display:block}
+.eqgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px;margin-bottom:20px}
+.eq{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:14px 16px;transition:.25s;overflow-x:auto}
+.eq:hover{border-color:rgba(245,158,11,.45);transform:translateY(-2px)}
+.eq h4{font-size:13px;color:var(--hot);margin-bottom:8px;font-weight:700}
+.eq .m{font-size:15px;text-align:center;padding:4px 0;direction:ltr}
+.eq small{color:var(--mut);font-size:11px;display:block;margin-top:6px;line-height:1.7}
+/* ---------- simulator ---------- */
+.sim{background:var(--card2);border:1px solid var(--line);border-radius:20px;padding:20px;margin-bottom:20px;position:relative;overflow:hidden}
+.sim::before{content:"";position:absolute;inset-inline-start:0;top:0;bottom:0;width:4px;background:var(--grad)}
+.sim h3{font-size:16px;font-weight:800;margin-bottom:4px}
+.sim h3 span{color:var(--hot)}
+.sim .sub{color:var(--mut);font-size:12px;margin-bottom:16px}
+.ingrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;margin-bottom:16px}
+.inp label{display:block;font-size:11px;color:var(--mut);margin-bottom:5px}
+.inp input,.inp select{width:100%;background:var(--bg2);border:1px solid var(--line);color:var(--txt);border-radius:10px;
+  padding:8px 10px;font-family:'Cairo';font-size:13px;direction:ltr;transition:.2s}
+.inp input:focus,.inp select:focus{outline:none;border-color:var(--hot)}
+.inp input[type=range]{padding:0;height:30px;accent-color:var(--hot)}
+.inp .chk{display:flex;align-items:center;gap:6px;height:36px}
+.outrow{display:flex;flex-wrap:wrap;gap:10px;margin-bottom:14px}
+.out{background:var(--bg2);border:1px solid var(--line);border-radius:12px;padding:8px 14px;min-width:110px}
+.out small{display:block;color:var(--mut);font-size:10.5px}
+.out b{font-size:15px;color:var(--hot);direction:ltr;display:block}
+.out.cold b{color:var(--cold)}
+.out.ok b{color:var(--ok)}
+.badge{display:inline-block;padding:6px 14px;border-radius:999px;font-size:12px;font-weight:700;margin-bottom:12px}
+.badge.ok{background:rgba(52,211,153,.12);color:var(--ok);border:1px solid rgba(52,211,153,.4)}
+.badge.no{background:rgba(248,113,113,.12);color:var(--bad);border:1px solid rgba(248,113,113,.4)}
+.badge.warn{background:rgba(245,158,11,.12);color:var(--hot);border:1px solid rgba(245,158,11,.4)}
+.chartbox{direction:ltr;background:var(--bg2);border:1px solid var(--line);border-radius:14px;padding:12px;height:300px;margin-bottom:12px}
+.chartbox.sm{height:240px}
+.twocol{display:grid;grid-template-columns:1.4fr 1fr;gap:12px}
+@media(max-width:900px){.twocol{grid-template-columns:1fr}}
+.bars{margin-top:6px}
+.bar{margin-bottom:10px}
+.bar small{color:var(--mut);font-size:11px;display:flex;justify-content:space-between}
+.bar .tr{height:10px;background:var(--bg);border-radius:99px;overflow:hidden;margin-top:4px}
+.bar .fl{height:100%;border-radius:99px;transition:width .6s ease}
+.fl.hot{background:var(--grad)} .fl.cold{background:linear-gradient(90deg,#22d3ee,#3b82f6)}
+/* ---------- quiz ---------- */
+.quiz{background:var(--card);border:1px solid var(--line);border-radius:20px;padding:20px}
+.quiz h3{font-size:16px;font-weight:800;margin-bottom:14px}
+.quiz h3 span{color:var(--cold)}
+.qz{margin-bottom:16px;border-bottom:1px dashed var(--line);padding-bottom:14px}
+.qz p{font-size:13.5px;margin-bottom:8px;line-height:1.9}
+.opt{display:flex;align-items:center;gap:8px;background:var(--bg2);border:1px solid var(--line);border-radius:10px;
+  padding:7px 12px;margin-bottom:6px;cursor:pointer;font-size:12.5px;transition:.2s}
+.opt:hover{border-color:var(--cold)}
+.opt.right{border-color:var(--ok);background:rgba(52,211,153,.1)}
+.opt.wrong{border-color:var(--bad);background:rgba(248,113,113,.1)}
+.fb{font-size:12px;margin-top:6px;line-height:1.8}
+.fb.ok{color:var(--ok)} .fb.no{color:var(--bad)}
+.btn{background:var(--grad);color:#fff;border:none;border-radius:12px;padding:10px 26px;font-family:'Cairo';font-weight:800;font-size:13px;cursor:pointer;transition:.25s;box-shadow:0 6px 18px rgba(239,68,68,.3)}
+.btn:hover{transform:translateY(-2px);box-shadow:0 10px 26px rgba(239,68,68,.45)}
+.score{font-weight:800;color:var(--hot);margin-inline-start:12px}
+/* ---------- tables ---------- */
+.tbl{width:100%;border-collapse:collapse;font-size:12px;direction:ltr;background:var(--bg2);border-radius:12px;overflow:hidden}
+.tbl th{background:var(--card);color:var(--hot);padding:8px;font-size:11px}
+.tbl td{padding:7px 8px;text-align:center;border-top:1px solid var(--line);color:var(--txt)}
+.tbl tr:hover td{background:rgba(245,158,11,.06)}
+.tabs{display:flex;gap:8px;margin-bottom:14px}
+.tab{background:var(--bg2);border:1px solid var(--line);color:var(--mut);border-radius:10px;padding:8px 18px;cursor:pointer;font-family:'Cairo';font-weight:700;font-size:12.5px;transition:.2s}
+.tab.sel{background:var(--grad);color:#fff;border:none}
+footer{border-top:1px solid var(--line);padding:22px;text-align:center;color:var(--mut);font-size:12px;line-height:2}
+footer b{color:var(--hot)}
+@media(max-width:1000px){
+  .wrap{flex-direction:column}
+  aside{position:static;width:100%;max-height:none;display:flex;overflow-x:auto;gap:6px;padding:12px}
+  .side-item{width:auto;flex-shrink:0}
+  .chips{grid-template-columns:repeat(2,1fr)}
+  .stats{grid-template-columns:repeat(2,1fr)}
+  main{padding:16px}
+}
+.katex{font-size:1.05em}
+</style>
+</head>
+<body>
+
+<header class="topbar">
+  <div class="logo">🔥</div>
+  <div>
+    <h1>مستكشف <span>انتقال الحرارة</span></h1>
+    <small>HEAT TRANSFER EXPLORER — INTERACTIVE LEARNING PLATFORM</small>
+  </div>
+  <div class="grow"></div>
+  <div class="sigma">σ = 5.67×10⁻⁸ W/m²·K⁴</div>
+</header>
+
+<div class="wrap">
+<aside id="side">
+  <button class="side-item sel" data-target="home"><span class="num">🏠</span> الرئيسية</button>
+  <button class="side-item" data-target="m1"><span class="num">1</span> آليات انتقال الحرارة</button>
+  <button class="side-item" data-target="m2"><span class="num">2</span> التوصيل المستقر 1-D</button>
+  <button class="side-item" data-target="m3"><span class="num">3</span> الأسطح الممتدة (الزعانف)</button>
+  <button class="side-item" data-target="m4"><span class="num">4</span> التوصيل الانتقالي</button>
+  <button class="side-item" data-target="m5"><span class="num">5</span> الحمل القسري الخارجي</button>
+  <button class="side-item" data-target="m6"><span class="num">6</span> الحمل الطبيعي</button>
+  <button class="side-item" data-target="m7"><span class="num">7</span> الحمل الداخلي</button>
+  <button class="side-item" data-target="m8"><span class="num">8</span> الإشعاع الحراري</button>
+  <button class="side-item" data-target="m9"><span class="num">9</span> المبادلات الحرارية</button>
+  <button class="side-item" data-target="m10"><span class="num">📖</span> دفتر البيانات التفاعلي</button>
+</aside>
+
+<main>
+<!-- ================= HERO ================= -->
+<section class="hero active" id="home">
+  <div class="hero-banner">
+    <img src="https://image.qwenlm.ai/public_source/e1b4fa8b-092f-4508-91fe-1e3fdc18c075/1f12d9eca-fb98-48b4-ae0a-ecb10c88aec1.png" alt="Heat Transfer Mechanisms">
+    <div class="ov">
+      <h2>من <b>التوصيل</b> إلى <b>الإشعاع</b>.. رحلة هندسية تفاعلية</h2>
+      <p>منصة تعليمية تغطي المحاضرات التسع لمنهج Heat and Mass Transfer: محاكيات حية، دفتر بيانات (Data Book) بخصائص الهواء والماء عند درجة حرارة الغشاء (Film Temperature)، واختبارات تفاعلية بأسلوب سقراطي.</p>
+    </div>
+  </div>
+  <div class="stats">
+    <div class="stat"><b>9</b><span>محاضرات أساسية</span></div>
+    <div class="stat"><b>40+</b><span>معادلة مُفعّلة بـ LaTeX</span></div>
+    <div class="stat"><b>10</b><span>محاكيات ومحسسات تفاعلية</span></div>
+    <div class="stat"><b>30</b><span>سؤال تقييم فوري</span></div>
+  </div>
+  <div class="chips">
+    <div class="chip" onclick="go('m1')"><span class="ic">🌡️</span><b>الآليات الثلاثة</b><small>Conduction · Convection · Radiation</small></div>
+    <div class="chip" onclick="go('m2')"><span class="ic">🧱</span><b>شبكات المقاومة الحرارية</b><small>Thermal Resistance Networks</small></div>
+    <div class="chip" onclick="go('m3')"><span class="ic">📐</span><b>الزعانف وكفاءتها</b><small>Fin Efficiency & Effectiveness</small></div>
+    <div class="chip" onclick="go('m4')"><span class="ic">⏱️</span><b>Lumped & Heisler</b><small>Biot & Fourier Numbers</small></div>
+    <div class="chip" onclick="go('m5')"><span class="ic">💨</span><b>الطبقة الحدودية</b><small>Boundary Layers · Nu, Re, Pr</small></div>
+    <div class="chip" onclick="go('m6')"><span class="ic">🎈</span><b>قوى الطفو</b><small>Grashof & Rayleigh</small></div>
+    <div class="chip" onclick="go('m7')"><span class="ic">🌀</span><b>الجريان داخل الأنابيب</b><small>Dittus–Boelter · Pressure Drop</small></div>
+    <div class="chip" onclick="go('m8')"><span class="ic">☀️</span><b>الجسم الأسود وعوامل الشكل</b><small>View Factors & Shields</small></div>
+    <div class="chip" onclick="go('m9')"><span class="ic"></span><b>LMTD & ε–NTU</b><small>Heat Exchanger Design</small></div>
+    <div class="chip" onclick="go('m10')"><span class="ic">📖</span><b>دفتر البيانات</b><small>Thermophysical Properties</small></div>
+  </div>
+</section>
+
+<!-- ================= M1 ================= -->
+<section class="module" id="m1">
+  <div class="mod-head"><div class="mod-num">1</div><div><h2>آليات انتقال الحرارة</h2><div class="en">MECHANISMS OF HEAT TRANSFER</div></div></div>
+  <div class="objs"><span class="obj">فهم Fourier's Law</span><span class="obj">قانون Newton للتبريد</span><span class="obj">قانون Stefan–Boltzmann</span><span class="obj">الآليات المتزامنة</span><span class="obj">حفظ الطاقة</span></div>
+  <div class="idea">الحرارة (Heat) هي طاقة تنتقل نتيجة <b>فرق درجات الحرارة</b> دائماً من الوسط الأعلى حرارة إلى الأدنى، وتتوقف عند الاتزان الحراري (Equilibrium). تنتقل بثلاثة أنماط: <b>توصيل</b> عبر تفاعل الجسيمات <span class="en">(Conduction)</span>، و<b>حمل</b> بحركة المائع <span class="en">(Convection)</span>، و<b>إشعاع</b> بموجات كهرومغناطيسية دون وسط ناقل <span class="en">(Radiation)</span>.</div>
+  <div class="eqgrid">
+    <div class="eq"><h4>Fourier's Law of Conduction</h4><div class="m">$$ q_{cond} = -k A \frac{dT}{dx} $$</div><small>k: التوصيلية الحرارية (W/m·K) — الإشارة السالبة تضمن كمية موجبة باتجاه انخفاض الحرارة.</small></div>
+    <div class="eq"><h4>Newton's Law of Cooling</h4><div class="m">$$ q_{conv} = h A (T_s - T_\infty) $$</div><small>h: معامل الحمل (W/m²·K) — ليس خاصية للمائع بل يُحدد تجريبياً.</small></div>
+    <div class="eq"><h4>Stefan–Boltzmann Law</h4><div class="m">$$ q_{rad} = \varepsilon \sigma A (T_s^4 - T_{surr}^4) $$</div><small>ε: الانبعاثية (0→1)، وللجسم الأسود ε = 1. درجات الحرارة بالكلفن.</small></div>
+    <div class="eq"><h4>Conservation of Energy</h4><div class="m">$$ \dot E_{in} - \dot E_{out} + \dot E_{gen} = \dot E_{st} $$</div><small>الحالة المستقرة بدون توليد: \( \dot E_{in} = \dot E_{out} \).</small></div>
+  </div>
+  <div class="sim">
+    <h3>🧪 محاكي: الفقد الحراري المركّب من سطح <span>(Convection + Radiation)</span></h3>
+    <div class="sub">حرّك المدخلات وشاهد كيف قد ينافس الإشعاعُ الحملَ في المقدار!</div>
+    <div class="ingrid">
+      <div class="inp"><label>Tₛ سطح (°C)</label><input id="c_ts" type="number" value="80"></div>
+      <div class="inp"><label>T∞ هواء (°C)</label><input id="c_tinf" type="number" value="25"></div>
+      <div class="inp"><label>Tₛᵤᵣ جدران (°C)</label><input id="c_tsur" type="number" value="15"></div>
+      <div class="inp"><label>h (W/m²·K)</label><input id="c_h" type="number" value="8"></div>
+      <div class="inp"><label>ε الانبعاثية</label><input id="c_eps" type="range" min="0.05" max="1" step="0.05" value="0.85"></div>
+      <div class="inp"><label>A المساحة (m²)</label><input id="c_A" type="number" value="1.6"></div>
+    </div>
+    <div class="outrow">
+      <div class="out"><small>q_conv (W)</small><b id="c_qc">—</b></div>
+      <div class="out"><small>q_rad (W)</small><b id="c_qr">—</b></div>
+      <div class="out ok"><small>q_total (W)</small><b id="c_qt">—</b></div>
+      <div class="out cold"><small>h_rad (W/m²·K)</small><b id="c_hrad">—</b></div>
+      <div class="out cold"><small>h_combined</small><b id="c_hcomb">—</b></div>
+    </div>
+    <div class="bars">
+      <div class="bar"><small><span>الحمل Convection</span><span id="c_pc">—</span></small><div class="tr"><div class="fl hot" id="bar_c" style="width:50%"></div></div></div>
+      <div class="bar"><small><span>الإشعاع Radiation</span><span id="c_pr">—</span></small><div class="tr"><div class="fl cold" id="bar_r" style="width:50%"></div></div></div>
+    </div>
+  </div>
+  <div class="quiz" id="m1-quiz"></div>
+</section>
+
+<!-- ================= M2 ================= -->
+<section class="module" id="m2">
+  <div class="mod-head"><div class="mod-num">2</div><div><h2>التوصيل المستقر أحادي البعد</h2><div class="en">STEADY 1-D CONDUCTION & THERMAL RESISTANCES</div></div></div>
+  <div class="objs"><span class="obj">مفهوم المقاومة الحرارية</span><span class="obj">جدران متعددة Multilayer</span><span class="obj">أسطوانات وكُرات</span><span class="obj">نصف القطر الحرج</span></div>
+  <div class="idea">بالمماثلة مع قانون أوم: معدل الحرارة = فرق الحرارة ÷ المقاومة الكلية <span class="en">(Thermal Resistance Concept)</span>. تُجمع مقاومات التوصيل والحمل <b>على التوالي</b>، ويُوزَّع ملف الحرارة خطياً داخل كل طبقة متجانسة.</div>
+  <div class="eqgrid">
+    <div class="eq"><h4>Plane Wall</h4><div class="m">$$ R_{cond} = \frac{L}{kA}, \quad q = \frac{T_1 - T_2}{R_{th}} $$</div><small>المقاومة تتناسب مع السمك وعكسياً مع k.</small></div>
+    <div class="eq"><h4>Hollow Cylinder</h4><div class="m">$$ R_{cyl} = \frac{\ln(r_o/r_i)}{2\pi k L} $$</div><small>المساحة تتغير شعاعياً A = 2πrL.</small></div>
+    <div class="eq"><h4>Hollow Sphere</h4><div class="m">$$ R_{sph} = \frac{r_o - r_i}{4\pi k r_i r_o} $$</div><small>تُستخدم في الخزانات الكروية والأنابيب المقوّسة.</small></div>
+    <div class="eq"><h4>Convection & Critical Radius</h4><div class="m">$$ R_{conv} = \frac{1}{hA}, \quad r_{cr} = \frac{k}{h}\ (\text{cyl}),\ \frac{2k}{h}\ (\text{sph}) $$</div><small>لـ r₂ &lt; r_cr إضافة العزل قد <b>تزيد</b> الفقد الحراري!</small></div>
+  </div>
+  <div class="sim">
+    <h3>🧪 محاكي: جدار فرن ثلاثي الطبقات <span>(Multilayer Wall)</span></h3>
+    <div class="sub">احسب q″ وملف الحرارة T(x) وتوزيع المقاومات. فعّل/عطّل أي طبقة.</div>
+    <div class="ingrid">
+      <div class="inp"><label>T∞,hot (°C)</label><input id="w_t1" type="number" value="250"></div>
+      <div class="inp"><label>h_hot (W/m²·K)</label><input id="w_h1" type="number" value="40"></div>
+      <div class="inp"><label>T∞,cold (°C)</label><input id="w_t2" type="number" value="25"></div>
+      <div class="inp"><label>h_cold (W/m²·K)</label><input id="w_h2" type="number" value="12"></div>
+      <div class="inp"><label>طبقة1: L (m)</label><input id="w_l1" type="number" step="0.01" value="0.20"></div>
+      <div class="inp"><label>طبقة1: k (W/m·K)</label><input id="w_k1" type="number" step="0.1" value="1.0"></div>
+      <div class="inp"><div class="chk"><input type="checkbox" id="w_on1" checked><label style="margin:0">طوب حراري</label></div></div>
+      <div class="inp"><label>طبقة2: L (m)</label><input id="w_l2" type="number" step="0.01" value="0.10"></div>
+      <div class="inp"><label>طبقة2: k (W/m·K)</label><input id="w_k2" type="number" step="0.01" value="0.08"></div>
+      <div class="inp"><div class="chk"><input type="checkbox" id="w_on2" checked><label style="margin:0">عازل</label></div></div>
+      <div class="inp"><label>طبقة3: L (m)</label><input id="w_l3" type="number" step="0.001" value="0.008"></div>
+      <div class="inp"><label>طبقة3: k (W/m·K)</label><input id="w_k3" type="number" value="45"></div>
+      <div class="inp"><div class="chk"><input type="checkbox" id="w_on3" checked><label style="margin:0">صفيحة فولاذ</label></div></div>
+    </div>
+    <div class="outrow">
+      <div class="out ok"><small>q″ (W/m²)</small><b id="w_q">—</b></div>
+      <div class="out"><small>ΣR″ (m²·K/W)</small><b id="w_rtot">—</b></div>
+      <div class="out"><small>Tₛ,داخل (°C)</small><b id="w_ts1">—</b></div>
+      <div class="out cold"><small>Tₛ,خارج (°C)</small><b id="w_ts2">—</b></div>
+    </div>
+    <div class="twocol">
+      <div class="chartbox"><canvas id="wallChart"></canvas></div>
+      <div class="chartbox"><canvas id="wallDonut"></canvas></div>
+    </div>
+  </div>
+  <div class="quiz" id="m2-quiz"></div>
+</section>
+
+<!-- ================= M3 ================= -->
+<section class="module" id="m3">
+  <div class="mod-head"><div class="mod-num">3</div><div><h2>الأسطح الممتدة — الزعانف</h2><div class="en">EXTENDED SURFACES (FINS)</div></div></div>
+  <div class="objs"><span class="obj">معادلة الزعنفة</span><span class="obj">4 شروط طرفية</span><span class="obj">η_f الكفاءة</span><span class="obj">ε_f الفعالية</span></div>
+  <div class="fig"><img src="https://image.qwenlm.ai/public_source/e1b4fa8b-092f-4508-91fe-1e3fdc18c075/1a0e920fe-c48e-4c5d-b993-175a034af798.png" alt="Fins"></div>
+  <div class="idea">لزيادة معدل الانتقال عند ثبات h وΔT نزيد المساحة Aₛ بزعانف من مواد عالية التوصيل (ألومنيوم/نحاس). توزيع الحرارة يحكمه <span class="en">Fin Equation</span>: \( \frac{d^2\theta}{dx^2} - m^2\theta = 0 \) حيث \( \theta = T - T_\infty \).</div>
+  <div class="eqgrid">
+    <div class="eq"><h4>Fin Parameter</h4><div class="m">$$ m = \sqrt{\frac{hP}{kA_c}}, \quad M = \sqrt{hPkA_c}\,\theta_b $$</div><small>P المحيط، A_c مساحة المقطع.</small></div>
+    <div class="eq"><h4>Case B: طرف معزول (Adiabatic)</h4><div class="m">$$ \frac{\theta}{\theta_b} = \frac{\cosh m(L-x)}{\cosh mL}, \quad q_f = M\tanh mL $$</div><small>الأكثر استخداماً عملياً.</small></div>
+    <div class="eq"><h4>Case D: زعنفة طويلة جداً</h4><div class="m">$$ \frac{\theta}{\theta_b} = e^{-mx}, \quad q_f = M $$</div><small>صالحة عندما mL &gt; 2.65.</small></div>
+    <div class="eq"><h4>Efficiency & Effectiveness</h4><div class="m">$$ \eta_f = \frac{\tanh(mL_c)}{mL_c}, \quad \varepsilon_f = \frac{q_f}{h A_{c,b}\theta_b} \ge 2 $$</div><small>L_c = L + t/2 للمستطيل. الزعنفة غير مجدية إن ε_f &lt; 2.</small></div>
+  </div>
+  <div class="sim">
+    <h3>🧪 محاكي: مخطط توزيع الحرارة T(x) <span>لثلاث حالات طرفية</span></h3>
+    <div class="sub">قارن الطرف الحقيقي (Convection Tip) بالمعزول وبالزعنفة اللانهائية.</div>
+    <div class="ingrid">
+      <div class="inp"><label>T_b القاعدة (°C)</label><input id="f_tb" type="number" value="120"></div>
+      <div class="inp"><label>T∞ (°C)</label><input id="f_tinf" type="number" value="25"></div>
+      <div class="inp"><label>h (W/m²·K)</label><input id="f_h" type="number" value="40"></div>
+      <div class="inp"><label>k (W/m·K)</label><input id="f_k" type="number" value="237"></div>
+      <div class="inp"><label>L الطول (m)</label><input id="f_L" type="number" step="0.005" value="0.06"></div>
+      <div class="inp"><label>t السمك (m)</label><input id="f_t" type="number" step="0.0005" value="0.003"></div>
+      <div class="inp"><label>w العرض (m)</label><input id="f_w" type="number" step="0.01" value="0.10"></div>
+    </div>
+    <div class="outrow">
+      <div class="out"><small>m (1/m)</small><b id="f_m">—</b></div>
+      <div class="out"><small>mL</small><b id="f_mL">—</b></div>
+      <div class="out"><small>q_f طرف حقيقي (W)</small><b id="f_qA">—</b></div>
+      <div class="out"><small>q_f طرف معزول (W)</small><b id="f_qB">—</b></div>
+      <div class="out"><small>q_f لانهائية (W)</small><b id="f_qD">—</b></div>
+      <div class="out ok"><small>η_f الكفاءة</small><b id="f_eta">—</b></div>
+      <div class="out ok"><small>ε_f الفعالية</small><b id="f_eps">—</b></div>
+    </div>
+    <div class="chartbox"><canvas id="finChart"></canvas></div>
+  </div>
+  <div class="quiz" id="m3-quiz"></div>
+</section>
+
+<!-- ================= M4 ================= -->
+<section class="module" id="m4">
+  <div class="mod-head"><div class="mod-num">4</div><div><h2>التوصيل الانتقالي</h2><div class="en">TRANSIENT CONDUCTION — LUMPED & HEISLER</div></div></div>
+  <div class="objs"><span class="obj">معيار Biot &lt; 0.1</span><span class="obj">الثابت الزمني τ</span><span class="obj">عدد Fourier</span><span class="obj">مخططات Heisler</span></div>
+  <div class="idea">عندما تتغير الحرارة مع الزمن <span class="en">(Transient)</span>، نفحص أولاً إمكانية إهمال المقاومة الداخلية عبر عدد Biot. إن كان \( Bi = hL_c/k < 0.1 \) نستخدم طريقة <b>الكتلة المركزة</b> (Lumped Capacitance) حيث T = f(time) فقط، وإلا لجأنا لمخططات Heisler أو الحلول الدقيقة.</div>
+  <div class="eqgrid">
+    <div class="eq"><h4>Biot Number</h4><div class="m">$$ Bi = \frac{h L_c}{k}, \quad L_c = \frac{V}{A_s} $$</div><small>كرة: r/3 — أسطوانة طويلة: r/2 — جدار 2L: L.</small></div>
+    <div class="eq"><h4>Lumped Solution</h4><div class="m">$$ \frac{T - T_\infty}{T_i - T_\infty} = e^{-t/\tau} = e^{-Bi\cdot Fo} $$</div><small>الحرارة تتغير أسّياً مع الزمن.</small></div>
+    <div class="eq"><h4>Time Constant & Fourier</h4><div class="m">$$ \tau = \frac{\rho V c_p}{h A_s}, \quad Fo = \frac{\alpha t}{L_c^2} $$</div><small>α = k/(ρc_p) الانتشارية الحرارية (m²/s).</small></div>
+    <div class="eq"><h4>Energy Transferred</h4><div class="m">$$ \frac{Q}{Q_o} = 1 - e^{-t/\tau}, \quad Q_o = \rho V c_p (T_i - T_\infty) $$</div><small>أقصى طاقة ممكنة عند الوصول للاتزان.</small></div>
+  </div>
+  <div class="sim">
+    <h3>🧪 محاكي: تبريد/تسخين جسم — <span>فحص صلاحية Lumped</span></h3>
+    <div class="sub">غيّر الشكل والمادة وh وراقب منحنى T(t) والثابت الزمني.</div>
+    <div class="ingrid">
+      <div class="inp"><label>الشكل</label><select id="t_shape"><option value="sph">كرة Sphere</option><option value="cyl">أسطوانة طويلة Cylinder</option><option value="wall">جدار 2L Wall</option></select></div>
+      <div class="inp"><label>المميّز r أو L (m)</label><input id="t_r" type="number" step="0.005" value="0.03"></div>
+      <div class="inp"><label>k (W/m·K)</label><input id="t_k" type="number" value="15"></div>
+      <div class="inp"><label>ρ (kg/m³)</label><input id="t_rho" type="number" value="7800"></div>
+      <div class="inp"><label>c_p (J/kg·K)</label><input id="t_cp" type="number" value="480"></div>
+      <div class="inp"><label>h (W/m²·K)</label><input id="t_h" type="number" value="100"></div>
+      <div class="inp"><label>T_i الابتدائية (°C)</label><input id="t_ti" type="number" value="300"></div>
+      <div class="inp"><label>T∞ المائع (°C)</label><input id="t_tinf" type="number" value="25"></div>
+    </div>
+    <span class="badge ok" id="t_badge">—</span>
+    <div class="outrow">
+      <div class="out"><small>L_c (m)</small><b id="t_lc">—</b></div>
+      <div class="out"><small>Biot</small><b id="t_bi">—</b></div>
+      <div class="out"><small>τ (s)</small><b id="t_tau">—</b></div>
+      <div class="out cold"><small>زمن بلوغ منتصف المدى (s)</small><b id="t_half">—</b></div>
+    </div>
+    <div class="chartbox"><canvas id="lumpChart"></canvas></div>
+  </div>
+  <div class="quiz" id="m4-quiz"></div>
+</section>
+
+<!-- ================= M5 ================= -->
+<section class="module" id="m5">
+  <div class="mod-head"><div class="mod-num">5</div><div><h2>الحمل القسري — الجريان الخارجي</h2><div class="en">EXTERNAL FORCED CONVECTION</div></div></div>
+  <div class="objs"><span class="obj">الطبقة الحدودية الهيدروديناميكية والحرارية</span><span class="obj">Nu, Re, Pr</span><span class="obj">صفيحة مستوية</span><span class="obj">أسطوانات وكُرات وحزم أنابيب</span></div>
+  <div class="idea">الحمل يجمع <b>التوصيل + حركة المائع</b>. عدد Reynolds يحدد النظام (صفيحي/اضطرابي)، وعدد Prandtl يقارن سماكتي الطبقتين الحدوديتين، وعدد Nusselt يمثل تعزيز الحمل مقارنة بالتوصيل الساكن عبر نفس طبقة المائع.</div>
+  <div class="eqgrid">
+    <div class="eq"><h4>Dimensionless Numbers</h4><div class="m">$$ Re_L = \frac{u_\infty L}{\nu}, \quad Pr = \frac{\nu}{\alpha}, \quad Nu = \frac{hL}{k} $$</div><small>Nu = 1 يعني انتقالاً بالتوصيل الخالص.</small></div>
+    <div class="eq"><h4>Flat Plate — Laminar</h4><div class="m">$$ \delta = 5x Re_x^{-1/2}, \quad Nu_L = 0.664 Re_L^{1/2} Pr^{1/3} $$</div><small>صالحة لـ Re &lt; 5×10⁵ و Pr ≥ 0.6.</small></div>
+    <div class="eq"><h4>Flat Plate — Combined</h4><div class="m">$$ Nu_L = (0.037 Re_L^{0.8} - 871) Pr^{1/3} $$</div><small>لـ 5×10⁵ ≤ Re_L ≤ 10⁸ (صفيحي + اضطرابي).</small></div>
+    <div class="eq"><h4>Cylinder — Churchill-Bernstein</h4><div class="m">$$ Nu_D = 0.3 + \frac{0.62 Re_D^{1/2} Pr^{1/3}}{[1+(0.4/Pr)^{2/3}]^{1/4}} \left[1+\left(\frac{Re_D}{282000}\right)^{5/8}\right]^{4/5} $$</div><small>لكل المدى Re·Pr &gt; 0.2 — الخصائص عند T_f.</small></div>
+  </div>
+  <div class="sim">
+    <h3>🧪 محاكي: صفيحة مستوية — <span>h(x) محلياً ونظام الجريان</span></h3>
+    <div class="sub">شاهد الانهيار في h عند نقطة الانتقال Laminar→Turbulent.</div>
+    <div class="ingrid">
+      <div class="inp"><label>L طول الصفيحة (m)</label><input id="e_L" type="number" step="0.1" value="0.5"></div>
+      <div class="inp"><label>u∞ السرعة (m/s)</label><input id="e_u" type="number" step="0.5" value="4"></div>
+      <div class="inp"><label>T_f الهواء (K)</label><select id="e_tf"><option>300</option><option selected>350</option><option>400</option><option>450</option><option>500</option></select></div>
+      <div class="inp"><label>T_s (°C)</label><input id="e_ts" type="number" value="80"></div>
+      <div class="inp"><label>T∞ (°C)</label><input id="e_tinf" type="number" value="30"></div>
+    </div>
+    <span class="badge ok" id="e_regime">—</span>
+    <div class="outrow">
+      <div class="out"><small>Re_L</small><b id="e_re">—</b></div>
+      <div class="out"><small>Nu_L</small><b id="e_nu">—</b></div>
+      <div class="out ok"><small>h̄ (W/m²·K)</small><b id="e_h">—</b></div>
+      <div class="out cold"><small>δ عند x=L (mm)</small><b id="e_delta">—</b></div>
+      <div class="out"><small>q′ (W/m عرضاً)</small><b id="e_q">—</b></div>
+    </div>
+    <div class="chartbox"><canvas id="plateChart"></canvas></div>
+  </div>
+  <div class="quiz" id="m5-quiz"></div>
+</section>
+
+<!-- ================= M6 ================= -->
+<section class="module" id="m6">
+  <div class="mod-head"><div class="mod-num">6</div><div><h2>الحمل الطبيعي (الحر)</h2><div class="en">NATURAL / FREE CONVECTION</div></div></div>
+  <div class="objs"><span class="obj">قوة الطفو Buoyancy</span><span class="obj">Gr و Ra</span><span class="obj">صفائح عمودية/أفقية</span><span class="obj">التجاويف Enclosures</span></div>
+  <div class="idea">حركة المائع هنا سببها <b>قوى الطفو</b> الناتجة عن فروق الكثافة بفعل فرق الحرارة — لا مراوح ولا مضخات. للمواد الغازية \( \beta = 1/T_f \). الانتقال في التجاويف الأفقية المسخّنة من أسفل يبدأ بالتوصيل الخالص (Nu=1) حتى يتجاوز Ra_L قيمة 1708 فتتكوّن خلايا دوّامة (Roll Cells).</div>
+  <div class="eqgrid">
+    <div class="eq"><h4>Grashof & Rayleigh</h4><div class="m">$$ Gr_L = \frac{g \beta (T_s - T_\infty) L^3}{\nu^2}, \quad Ra_L = Gr_L \cdot Pr $$</div><small>الاضطراب عند Ra ≳ 10⁹ للصفيحة العمودية.</small></div>
+    <div class="eq"><h4>Churchill–Chu (Vertical)</h4><div class="m">$$ Nu = \left\{ 0.825 + \frac{0.387 Ra^{1/6}}{[1+(0.492/Pr)^{9/16}]^{8/27}} \right\}^2 $$</div><small>لكل مدى Ra — الخصائص عند T_f.</small></div>
+    <div class="eq"><h4>Horizontal Plate (Up/Hot)</h4><div class="m">$$ Nu = 0.54 Ra^{1/4} \ (10^4\!-\!10^7), \quad Nu = 0.15 Ra^{1/3} \ (10^7\!-\!10^{11}) $$</div><small>والسطح الساخن المتجه لأسفل: Nu = 0.27 Ra¹ᐟ⁴.</small></div>
+    <div class="eq"><h4>Enclosure (Vertical)</h4><div class="m">$$ Nu = 0.42 Ra^{1/4} Pr^{0.012} (H/L)^{-0.3} $$</div><small>لـ Ra &gt; 10³ و H/L بين 10 و 40.</small></div>
+  </div>
+  <div class="sim">
+    <h3>🧪 محاكي: صفيحة عمودية في هواء ساكن <span>(Churchill–Chu)</span></h3>
+    <div class="sub">موضع النقطة الحالية على منحنى Nu–Ra الشامل.</div>
+    <div class="ingrid">
+      <div class="inp"><label>L الارتفاع (m)</label><input id="n_L" type="number" step="0.1" value="0.8"></div>
+      <div class="inp"><label>W العرض (m)</label><input id="n_w" type="number" step="0.1" value="1"></div>
+      <div class="inp"><label>T_s (°C)</label><input id="n_ts" type="number" value="70"></div>
+      <div class="inp"><label>T∞ (°C)</label><input id="n_tinf" type="number" value="25"></div>
+    </div>
+    <span class="badge ok" id="n_badge">—</span>
+    <div class="outrow">
+      <div class="out"><small>Gr_L</small><b id="n_gr">—</b></div>
+      <div class="out"><small>Ra_L</small><b id="n_ra">—</b></div>
+      <div class="out"><small>Nu</small><b id="n_nu">—</b></div>
+      <div class="out ok"><small>h̄ (W/m²·K)</small><b id="n_h">—</b></div>
+      <div class="out"><small>q (W)</small><b id="n_q">—</b></div>
+    </div>
+    <div class="chartbox"><canvas id="natChart"></canvas></div>
+  </div>
+  <div class="quiz" id="m6-quiz"></div>
+</section>
+
+<!-- ================= M7 ================= -->
+<section class="module" id="m7">
+  <div class="mod-head"><div class="mod-num">7</div><div><h2>الحمل القسري — الجريان الداخلي</h2><div class="en">INTERNAL FLOW IN TUBES & DUCTS</div></div></div>
+  <div class="objs"><span class="obj">أنظمة الجريان Re</span><span class="obj">أطوال الدخول</span><span class="obj">q″=C مقابل Tₛ=C</span><span class="obj">Dittus–Boelter</span><span class="obj">فقد الضغط وقدرة الضخ</span></div>
+  <div class="idea">داخل الأنبوب نميّز منطقتي الدخول والاستقرار التام. في الصفيحي المستقر يكون Nu <b>ثابتاً</b> لا يعتمد على Re أو Pr (3.66 لـ Tₛ ثابتة و4.36 لـ q″ ثابتة)، وفي الاضطراب نستخدم Dittus–Boelter. انتبه: الخصائص عند متوسط حرارة المائع T_m.</div>
+  <div class="eqgrid">
+    <div class="eq"><h4>Reynolds & Regime</h4><div class="m">$$ Re_D = \frac{4\dot m}{\pi D \mu} $$</div><small>صفيحي &lt; 2300 — انتقالي حتى 10⁴ — اضطرابي ≥ 10⁴.</small></div>
+    <div class="eq"><h4>Entry Lengths</h4><div class="m">$$ L_{t,lam} \approx 0.05\,Re\,Pr\,D, \quad L_{t,turb} \approx 10 D $$</div><small>h كبير عند الدخول ثم يستقر.</small></div>
+    <div class="eq"><h4>Dittus–Boelter (Turbulent)</h4><div class="m">$$ Nu = 0.023 Re^{0.8} Pr^{n}, \quad n = \begin{cases}0.4 & \text{heating}\\0.3 & \text{cooling}\end{cases} $$</div><small>لـ Re &gt; 10⁴ و 0.6 ≤ Pr ≤ 160 و L/D ≥ 10.</small></div>
+    <div class="eq"><h4>Pressure Drop & Pumping</h4><div class="m">$$ \Delta p = f \frac{L}{D}\frac{\rho u_m^2}{2}, \quad P = \dot V \Delta p $$</div><small>f = 64/Re صفيحي؛ 0.316·Re⁻⁰·²⁵ اضطرابي أملس.</small></div>
+  </div>
+  <div class="sim">
+    <h3>🧪 محاكي: أنبوب دائري — <span>من Re إلى قدرة الضخ</span></h3>
+    <div class="sub">جرّب ماءً وهواءً ولاحظ انقلاب النظام والقيم.</div>
+    <div class="ingrid">
+      <div class="inp"><label>المائع</label><select id="i_fluid"><option value="w" selected>ماء Water</option><option value="a">هواء Air</option></select></div>
+      <div class="inp"><label>T_m (K)</label><select id="i_Tm"><option>300</option><option>310</option><option selected>320</option><option>330</option><option>340</option><option>350</option></select></div>
+      <div class="inp"><label>D القطر (m)</label><input id="i_D" type="number" step="0.001" value="0.015"></div>
+      <div class="inp"><label>L الطول (m)</label><input id="i_L" type="number" step="0.5" value="6"></div>
+      <div class="inp"><label>ṁ (kg/s)</label><input id="i_mdot" type="number" step="0.005" value="0.01"></div>
+      <div class="inp"><label>الشرط السطحي</label><select id="i_cond"><option value="ts">Tₛ = C</option><option value="q">q″ = C</option></select></div>
+      <div class="inp"><label>اتجاه الحرارة</label><select id="i_mode"><option value="h">تسخين n=0.4</option><option value="c">تبريد n=0.3</option></select></div>
+    </div>
+    <span class="badge ok" id="i_regime">—</span>
+    <div class="outrow">
+      <div class="out"><small>Re_D</small><b id="i_re">—</b></div>
+      <div class="out"><small>u_m (m/s)</small><b id="i_um">—</b></div>
+      <div class="out"><small>طول الدخول (m)</small><b id="i_entry">—</b></div>
+      <div class="out"><small>Nu</small><b id="i_nu">—</b></div>
+      <div class="out ok"><small>h (W/m²·K)</small><b id="i_h">—</b></div>
+      <div class="out cold"><small>Δp (Pa)</small><b id="i_dp">—</b></div>
+      <div class="out cold"><small>قدرة الضخ (W)</small><b id="i_pow">—</b></div>
+    </div>
+  </div>
+  <div class="quiz" id="m7-quiz"></div>
+</section>
+
+<!-- ================= M8 ================= -->
+<section class="module" id="m8">
+  <div class="mod-head"><div class="mod-num">8</div><div><h2>الإشعاع الحراري</h2><div class="en">THERMAL RADIATION & VIEW FACTORS</div></div></div>
+  <div class="objs"><span class="obj">الجسم الأسود والرمادي</span><span class="obj">قانون Kirchhoff</span><span class="obj">View Factor وعلاقاته</span><span class="obj">الدروع الإشعاعية</span></div>
+  <div class="idea">الإشعاع انتقال بفوتونات/mوجات كهرومغناطيسية (λ = 0.1–100 µm) <b>لا يحتاج وسطاً</b> وبسرعة الضوء. الجسم الأسود باعث وممتص مثالي (ε = α = 1). عامل الشكل F_ij كمية هندسية بحتة تحكمها علاقتا الجمع والتبادل.</div>
+  <div class="eqgrid">
+    <div class="eq"><h4>Energy Balance</h4><div class="m">$$ \alpha + \rho + \tau = 1 $$</div><small>وللأسطح المعتمة: τ = 0 ⇒ α + ρ = 1.</small></div>
+    <div class="eq"><h4>Kirchhoff's Law</h4><div class="m">$$ \varepsilon = \alpha $$</div><small>عند نفس T وλ — أساس نموذج السطح الرمادي المنتشر.</small></div>
+    <div class="eq"><h4>View Factor Relations</h4><div class="m">$$ \sum_{j=1}^{N} F_{ij} = 1, \quad A_i F_{ij} = A_j F_{ji} $$</div><small>الجمع للحيّز المغلق + التبادلية.</small></div>
+    <div class="eq"><h4>Parallel Plates + N Shields</h4><div class="m">$$ \frac{q}{A} = \frac{\sigma(T_1^4 - T_2^4)}{\left(\frac{1}{\varepsilon_1}+\frac{1}{\varepsilon_2}-1\right) + N\left(\frac{2}{\varepsilon_s}-1\right)} $$</div><small>درع عاكس واحد (ε صغير) يخفض q إلى النصف تقريباً.</small></div>
+  </div>
+  <div class="sim">
+    <h3>🧪 محاكي مزدوج: منحنى الجسم الأسود <span>+ قوة الدروع</span></h3>
+    <div class="sub">حرّك T وε لمراقبة E_b، ثم أضف دروعاً وشاهد الانهيار في q.</div>
+    <div class="ingrid">
+      <div class="inp"><label>T السطح (K)</label><input id="r_T" type="range" min="200" max="1500" step="10" value="600"></div>
+      <div class="inp"><label>ε السطح الرمادي</label><input id="r_eps" type="range" min="0.05" max="1" step="0.05" value="0.8"></div>
+      <div class="inp"><label>T₁ (K)</label><input id="r_T1" type="number" value="600"></div>
+      <div class="inp"><label>T₂ (K)</label><input id="r_T2" type="number" value="300"></div>
+      <div class="inp"><label>ε₁</label><input id="r_e1" type="number" step="0.05" value="0.8"></div>
+      <div class="inp"><label>ε₂</label><input id="r_e2" type="number" step="0.05" value="0.6"></div>
+      <div class="inp"><label>ε الدرع</label><input id="r_es" type="number" step="0.01" value="0.05"></div>
+      <div class="inp"><label>عدد الدروع N</label><input id="r_N" type="number" min="0" max="10" value="1"></div>
+    </div>
+    <div class="outrow">
+      <div class="out"><small>E_b = σT⁴ (W/m²)</small><b id="r_eb">—</b></div>
+      <div class="out"><small>E = εσT⁴ (W/m²)</small><b id="r_gray">—</b></div>
+      <div class="out"><small>q/A بدون دروع (W/m²)</small><b id="r_q0">—</b></div>
+      <div class="out ok"><small>q/A مع الدروع (W/m²)</small><b id="r_q1">—</b></div>
+      <div class="out ok"><small>نسبة الخفض %</small><b id="r_red">—</b></div>
+    </div>
+    <div class="chartbox"><canvas id="radChart"></canvas></div>
+  </div>
+  <div class="quiz" id="m8-quiz"></div>
+</section>
+
+<!-- ================= M9 ================= -->
+<section class="module" id="m9">
+  <div class="mod-head"><div class="mod-num">9</div><div><h2>المبادلات الحرارية</h2><div class="en">HEAT EXCHANGERS — LMTD & ε–NTU</div></div></div>
+  <div class="objs"><span class="obj">التصنيفات والأنواع</span><span class="obj">U وعوامل الترسيب Fouling</span><span class="obj">طريقة LMTD</span><span class="obj">طريقة ε–NTU</span></div>
+  <div class="fig"><img src="https://image.qwenlm.ai/public_source/e1b4fa8b-092f-4508-91fe-1e3fdc18c075/1803366c0-3c41-4557-893a-f65c1d10ef60.png" alt="Shell and Tube HX"></div>
+  <div class="idea">لنفس درجات الحرارة الطرفية، الـ LMTD في <b>التيار المعاكس</b> (Counter-flow) أكبر منها في التيار المتوازي ⇒ مساحة أصغر لنفس الحمل، ولهذا يُفضَّل المعاكس. عند جهل درجات الخروج نلجأ لطريقة ε–NTU دون تكرارات.</div>
+  <div class="eqgrid">
+    <div class="eq"><h4>LMTD</h4><div class="m">$$ \Delta T_{lm} = \frac{\Delta T_1 - \Delta T_2}{\ln(\Delta T_1/\Delta T_2)}, \quad q = U A F \Delta T_{lm} $$</div><small>F معامل تصحيح للأنماط المتعددة المرور.</small></div>
+    <div class="eq"><h4>Overall Coefficient</h4><div class="m">$$ \frac{1}{U} = \frac{1}{h_i} + \frac{1}{h_o} + R_f $$</div><small>للأنبوب الرقيق عالي التوصيل؛ R_f عامل الترسيب.</small></div>
+    <div class="eq"><h4>Effectiveness</h4><div class="m">$$ \varepsilon = \frac{q}{C_{min}(T_{h,i}-T_{c,i})}, \quad NTU = \frac{UA}{C_{min}} $$</div><small>C = ṁ·c_p معدل السعة الحرارية (W/K).</small></div>
+    <div class="eq"><h4>Counter-flow ε</h4><div class="m">$$ \varepsilon = \frac{1-e^{-NTU(1-C_r)}}{1-C_r e^{-NTU(1-C_r)}} $$</div><small>وللمكثف/الغلاية (C_r = 0): ε = 1 − e⁻ᵀᵁ.</small></div>
+  </div>
+  <div class="sim">
+    <h3>🧪 مختبر المبادل: <span>LMTD ⇄ ε–NTU</span></h3>
+    <div class="tabs">
+      <button class="tab sel" id="tab_l" onclick="hxTab('l')">طريقة LMTD (تصميم)</button>
+      <button class="tab" id="tab_e" onclick="hxTab('e')">طريقة ε–NTU (أداء)</button>
+    </div>
+    <div id="pane_l">
+      <div class="ingrid">
+        <div class="inp"><label>T_h,i (°C)</label><input id="x_thi" type="number" value="160"></div>
+        <div class="inp"><label>T_h,o (°C)</label><input id="x_tho" type="number" value="100"></div>
+        <div class="inp"><label>T_c,i (°C)</label><input id="x_tci" type="number" value="15"></div>
+        <div class="inp"><label>T_c,o (°C)</label><input id="x_tco" type="number" value="85"></div>
+        <div class="inp"><label>النمط</label><select id="x_arr"><option value="cf">معاكس Counter</option><option value="pf">متوازٍ Parallel</option></select></div>
+        <div class="inp"><label>U (W/m²·K)</label><input id="x_U" type="number" value="354"></div>
+        <div class="inp"><label>q (kW)</label><input id="x_q" type="number" value="731.7"></div>
+      </div>
+      <div class="outrow">
+        <div class="out"><small>ΔT₁ (°C)</small><b id="x_dt1">—</b></div>
+        <div class="out"><small>ΔT₂ (°C)</small><b id="x_dt2">—</b></div>
+        <div class="out ok"><small>LMTD (°C)</small><b id="x_lmtd">—</b></div>
+        <div class="out ok"><small>المساحة A (m²)</small><b id="x_A">—</b></div>
+      </div>
+      <div class="chartbox sm"><canvas id="hxChart"></canvas></div>
+    </div>
+    <div id="pane_e" style="display:none">
+      <div class="ingrid">
+        <div class="inp"><label>ṁ_c (kg/s)</label><input id="y_mc" type="number" step="0.1" value="2.5"></div>
+        <div class="inp"><label>c_p,c (J/kg·K)</label><input id="y_cpc" type="number" value="4181"></div>
+        <div class="inp"><label>ṁ_h (kg/s)</label><input id="y_mh" type="number" step="0.1" value="5.19"></div>
+        <div class="inp"><label>c_p,h (J/kg·K)</label><input id="y_cph" type="number" value="2350"></div>
+        <div class="inp"><label>U (W/m²·K)</label><input id="y_U2" type="number" value="354"></div>
+        <div class="inp"><label>A (m²)</label><input id="y_A2" type="number" value="29.5"></div>
+        <div class="inp"><label>T_h,i (°C)</label><input id="y_thi" type="number" value="160"></div>
+        <div class="inp"><label>T_c,i (°C)</label><input id="y_tci" type="number" value="15"></div>
+        <div class="inp"><label>النمط</label><select id="y_arr2"><option value="cf">معاكس Counter</option><option value="pf">متوازٍ Parallel</option><option value="c0">مكثف/غلاية C_r=0</option></select></div>
+      </div>
+      <div class="outrow">
+        <div class="out"><small>C_min / C_max (W/K)</small><b id="y_cc">—</b></div>
+        <div class="out"><small>C_r</small><b id="y_cr">—</b></div>
+        <div class="out"><small>NTU</small><b id="y_ntu">—</b></div>
+        <div class="out ok"><small>ε</small><b id="y_eps">—</b></div>
+        <div class="out ok"><small>q (kW)</small><b id="y_q">—</b></div>
+        <div class="out"><small>T_h,o (°C)</small><b id="y_tho">—</b></div>
+        <div class="out cold"><small>T_c,o (°C)</small><b id="y_tco">—</b></div>
+      </div>
+    </div>
+  </div>
+  <div class="quiz" id="m9-quiz"></div>
+</section>
+
+<!-- ================= M10 ================= -->
+<section class="module" id="m10">
+  <div class="mod-head"><div class="mod-num">📖</div><div><h2>دفتر البيانات التفاعلي</h2><div class="en">INTERACTIVE DATA BOOK — PROPERTIES AT FILM TEMPERATURE</div></div></div>
+  <div class="objs"><span class="obj">استيفاء خصائص الهواء والماء</span><span class="obj">T_f = (Tₛ+T∞)/2</span><span class="obj">توصيلية المواد الشائعة</span><span class="obj">مرجع سريع للمعادلات التجريبية</span></div>
+  <div class="idea">القاعدة الذهبية في الحمل: <b>قيّم الخصائص عند درجة حرارة الغشاء</b> \( T_f = (T_s + T_\infty)/2 \) في الجريان الخارجي، وعند T_m في الداخلي. استخدم المستكشف أدناه للاستيفاء الخطي بين قيم الجداول المرجعية (Incropera Table A.4 / A.6).</div>
+  <div class="sim">
+    <h3>🧪 مستكشف الخصائص عند <span>T_f</span></h3>
+    <div class="ingrid">
+      <div class="inp"><label>المائع</label><select id="d_fluid"><option value="a" selected>هواء Air</option><option value="w">ماء Water</option></select></div>
+      <div class="inp"><label>T_f (K)</label><input id="d_T" type="range" min="280" max="500" step="5" value="320"></div>
+    </div>
+    <div class="outrow" id="d_out"></div>
+    <div class="twocol">
+      <div>
+        <h4 style="color:var(--hot);margin-bottom:8px;font-size:13px">التوصيلية الحرارية k لمواد شائعة (W/m·K)</h4>
+        <table class="tbl"><tr><th>Material</th><th>k</th><th>Material</th><th>k</th></tr>
+          <tr><td>نحاس Copper</td><td>401</td><td>خرسانة Concrete</td><td>0.8</td></tr>
+          <tr><td>ألومنيوم Aluminum</td><td>237</td><td>زجاج بايركس Pyrex</td><td>1.4</td></tr>
+          <tr><td>ستانلس Steel 302</td><td>15.1</td><td>خشب Wood</td><td>0.12</td></tr>
+          <tr><td>ماء Water</td><td>0.6</td><td>فايبرغلاس Fiberglass</td><td>0.035</td></tr>
+          <tr><td>هواء Air</td><td>0.026</td><td>بوليسترين Foam</td><td>0.03</td></tr>
+        </table>
+      </div>
+      <div>
+        <h4 style="color:var(--hot);margin-bottom:8px;font-size:13px">مرجع سريع: معاملات h النموذجية (W/m²·K)</h4>
+        <table class="tbl"><tr><th>Process</th><th>h range</th></tr>
+          <tr><td>حمل حر — غازات</td><td>2 – 25</td></tr>
+          <tr><td>حمل حر — سوائل</td><td>50 – 1000</td></tr>
+          <tr><td>حمل قسري — غازات</td><td>25 – 250</td></tr>
+          <tr><td>حمل قسري — سوائل</td><td>50 – 20,000</td></tr>
+          <tr><td>غليان / تكثيف</td><td>2500 – 100,000</td></tr>
+        </table>
+      </div>
+    </div>
+  </div>
+  <div class="quiz" id="m10-quiz"></div>
+</section>
+
+</main>
+</div>
+
+<footer>
+  <b>مستكشف انتقال الحرارة — Heat Transfer Explorer</b><br>
+  المراجع: Incropera & DeWitt, <i>Fundamentals of Heat and Mass Transfer</i> (7th Ed.) · Çengel, <i>Heat Transfer: A Practical Approach</i><br>
+  أُعدّت المنصة لأغراض تعليمية — د. أبوبكر أ. م. محمدعلي، جامعة السودان للعلوم والتكنولوجيا
+</footer>
+
+<script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js" onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'\\(',right:'\\)',display:false}]});"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script>
+/* ================= NAVIGATION ================= */
+function go(id){
+  document.querySelectorAll('.module,.hero').forEach(s=>s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  document.querySelectorAll('.side-item').forEach(b=>b.classList.toggle('sel',b.dataset.target===id));
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+document.querySelectorAll('.side-item').forEach(b=>b.addEventListener('click',()=>go(b.dataset.target)));
+
+/* ================= HELPERS ================= */
+const $=id=>document.getElementById(id);
+const SIG=5.67e-8, G=9.81;
+function fmt(x,d){ if(!isFinite(x))return '—'; const a=Math.abs(x);
+  if(a>=1e5||a<1e-3&&a>0) return x.toExponential(2);
+  if(a>=1000) return x.toLocaleString('en-US',{maximumFractionDigits:0});
+  if(a>=1) return (+x.toFixed(d===undefined?2:d)).toString();
+  return (+x.toPrecision(3)).toString(); }
+window.charts={};
+function mkChart(id,cfg){ if(charts[id])charts[id].destroy(); charts[id]=new Chart($(id),cfg); }
+Chart.defaults.font.family="'Cairo',sans-serif";
+Chart.defaults.color='#8fa3c8';
+Chart.defaults.borderColor='rgba(148,163,184,.12)';
+const GRID={color:'rgba(148,163,184,.10)'};
+
+/* ================= PROPERTY TABLES ================= */
+const AIR=[
+ {T:300,nu:15.89e-6,k:0.0263,al:22.5e-6,Pr:0.707},
+ {T:350,nu:20.92e-6,k:0.0300,al:29.9e-6,Pr:0.700},
+ {T:400,nu:26.41e-6,k:0.0338,al:38.3e-6,Pr:0.690},
+ {T:450,nu:32.39e-6,k:0.0373,al:46.9e-6,Pr:0.686},
+ {T:500,nu:38.79e-6,k:0.0407,al:56.3e-6,Pr:0.684}];
+const WAT=[
+ {T:300,rho:997,cp:4179,mu:855e-6,k:0.613,Pr:5.83},
+ {T:310,rho:993.1,cp:4178,mu:695e-6,k:0.628,Pr:4.62},
+ {T:320,rho:989,cp:4180,mu:577e-6,k:0.640,Pr:3.77},
+ {T:330,rho:985,cp:4184,mu:489e-6,k:0.648,Pr:3.15},
+ {T:340,rho:979,cp:4188,mu:420e-6,k:0.657,Pr:2.68},
+ {T:350,rho:973.7,cp:4195,mu:365e-6,k:0.668,Pr:2.29}];
+function propAt(tbl,T){
+  if(T<=tbl[0].T)return Object.assign({},tbl[0]);
+  const n=tbl.length; if(T>=tbl[n-1].T)return Object.assign({},tbl[n-1]);
+  for(let i=0;i<n-1;i++){ if(T>=tbl[i].T&&T<=tbl[i+1].T){
+    const f=(T-tbl[i].T)/(tbl[i+1].T-tbl[i].T),o={T};
+    for(const k2 in tbl[i]){ if(k2==='T')continue; o[k2]=tbl[i][k2]+(tbl[i+1][k2]-tbl[i][k2])*f; }
+    return o; } }
+}
+
+/* ================= M1 SIM ================= */
+function simM1(){
+  const Ts=+$('c_ts').value+273.15, Ti=+$('c_tinf').value+273.15, Tsur=+$('c_tsur').value+273.15;
+  const h=+$('c_h').value, e=+$('c_eps').value, A=+$('c_A').value;
+  const qc=h*A*(Ts-Ti), qr=e*SIG*A*(Math.pow(Ts,4)-Math.pow(Tsur,4)), qt=qc+qr;
+  const hrad=e*SIG*(Ts+Tsur)*(Ts*Ts+Tsur*Tsur);
+  $('c_qc').textContent=fmt(qc); $('c_qr').textContent=fmt(qr); $('c_qt').textContent=fmt(qt);
+  $('c_hrad').textContent=fmt(hrad); $('c_hcomb').textContent=fmt(h+hrad);
+  const pc=100*Math.abs(qc)/Math.max(1e-9,Math.abs(qc)+Math.abs(qr));
+  $('c_pc').textContent=fmt(pc,1)+'%'; $('c_pr').textContent=fmt(100-pc,1)+'%';
+  $('bar_c').style.width=pc+'%'; $('bar_r').style.width=(100-pc)+'%';
+}
+['c_ts','c_tinf','c_tsur','c_h','c_eps','c_A'].forEach(id=>$(id).addEventListener('input',simM1));
+
+/* ================= M2 SIM ================= */
+function simM2(){
+  const T1=+$('w_t1').value,T2=+$('w_t2').value,h1=+$('w_h1').value,h2=+$('w_h2').value;
+  const layers=[];
+  [[1,'طوب'],[2,'عازل'],[3,'فولاذ']].forEach(p=>{
+    if($('w_on'+p[0]).checked) layers.push({name:p[1],L:+$('w_l'+p[0]).value,k:+$('w_k'+p[0]).value});
+  });
+  let Rtot=1/h1; const Rs=[{n:'حمل داخلي',v:1/h1}];
+  layers.forEach(L=>{const r=L.L/L.k; Rs.push({n:L.n,v:r}); Rtot+=r;});
+  Rs.push({n:'حمل خارجي',v:1/h2}); Rtot+=1/h2;
+  const q=(T1-T2)/Rtot;
+  let Tc=T1-q/h1; const xs=[0,0],Ts2=[T1,Tc];
+  layers.forEach(L=>{ Tc-=q*L.L/L.k; xs.push(xs[xs.length-1]+L.L); Ts2.push(Tc); });
+  const Ltot=xs[xs.length-1]; xs.push(Ltot); Ts2.push(T2);
+  $('w_q').textContent=fmt(q); $('w_rtot').textContent=fmt(Rtot,4);
+  $('w_ts1').textContent=fmt(Ts2[1]); $('w_ts2').textContent=fmt(Ts2[Ts2.length-2]);
+  mkChart('wallChart',{type:'line',data:{datasets:[{label:'T(x) °C',data:xs.map((x,i)=>({x:x,y:Ts2[i]})),borderColor:'#f59e0b',backgroundColor:'#f59e0b',borderWidth:2.5,pointRadius:4,pointBackgroundColor:'#ef4444',tension:0}]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},title:{display:true,text:'Temperature Profile T(x)'}},scales:{x:{type:'linear',title:{display:true,text:'x (m)'},grid:GRID},y:{title:{display:true,text:'T (°C)'},grid:GRID}}}});
+  mkChart('wallDonut',{type:'doughnut',data:{labels:Rs.map(r=>r.n),datasets:[{data:Rs.map(r=>r.v),backgroundColor:['#22d3ee','#f59e0b','#ef4444','#94a3b8','#a78bfa','#34d399','#f472b6'],borderColor:'#0b1226',borderWidth:2}]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom',labels:{boxWidth:12}},title:{display:true,text:'Resistance Share'}}}});
+}
+['w_t1','w_t2','w_h1','w_h2','w_l1','w_k1','w_on1','w_l2','w_k2','w_on2','w_l3','w_k3','w_on3'].forEach(id=>$(id).addEventListener('input',simM2));
+
+/* ================= M3 SIM ================= */
+function simM3(){
+  const h=+$('f_h').value,k=+$('f_k').value,L=+$('f_L').value,t=+$('f_t').value,w=+$('f_w').value;
+  const Tb=+$('f_tb').value,Tinf=+$('f_tinf').value,thb=Tb-Tinf;
+  const Ac=w*t,P=2*(w+t),m=Math.sqrt(h*P/(k*Ac)),M=Math.sqrt(h*P*k*Ac)*thb;
+  const mL=m*L,ht=h/(m*k);
+  const qA=M*(Math.sinh(mL)+ht*Math.cosh(mL))/(Math.cosh(mL)+ht*Math.sinh(mL));
+  const qB=M*Math.tanh(mL), qD=M;
+  const Lc=L+t/2, eta=Math.tanh(m*Lc)/(m*Lc), epsf=qB/(h*Ac*thb);
+  $('f_m').textContent=fmt(m); $('f_mL').textContent=fmt(mL);
+  $('f_qA').textContent=fmt(qA); $('f_qB').textContent=fmt(qB); $('f_qD').textContent=fmt(qD);
+  $('f_eta').textContent=fmt(eta*100,1)+'%'; $('f_eps').textContent=fmt(epsf);
+  const xs=[],dA=[],dB=[],dD=[];
+  for(let i=0;i<=40;i++){ const x=L*i/40;
+    dA.push((Math.cosh(m*(L-x))+ht*Math.sinh(m*(L-x)))/(Math.cosh(mL)+ht*Math.sinh(mL)));
+    dB.push(Math.cosh(m*(L-x))/Math.cosh(mL)); dD.push(Math.exp(-m*x)); xs.push(+(x*1000).toFixed(2)); }
+  mkChart('finChart',{type:'line',data:{labels:xs,datasets:[
+    {label:'طرف حقيقي (Convection tip)',data:dA,borderColor:'#f59e0b',borderWidth:2.5,pointRadius:0},
+    {label:'طرف معزول (Adiabatic)',data:dB,borderColor:'#22d3ee',borderWidth:2,pointRadius:0,borderDash:[6,4]},
+    {label:'زعنفة لانهائية (Infinite)',data:dD,borderColor:'#a78bfa',borderWidth:2,pointRadius:0,borderDash:[2,3]}]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom',labels:{boxWidth:14}},title:{display:true,text:'θ/θ_b along the fin'}},scales:{x:{title:{display:true,text:'x (mm)'},grid:GRID},y:{min:0,max:1.05,title:{display:true,text:'θ/θ_b'},grid:GRID}}}});
+}
+['f_h','f_k','f_L','f_t','f_w','f_tb','f_tinf'].forEach(id=>$(id).addEventListener('input',simM3));
+
+/* ================= M4 SIM ================= */
+function simM4(){
+  const sh=$('t_shape').value,r=+$('t_r').value,k=+$('t_k').value,rho=+$('t_rho').value,cp=+$('t_cp').value,h=+$('t_h').value,Ti=+$('t_ti').value,Tinf=+$('t_tinf').value;
+  const Lc= sh==='sph'? r/3 : sh==='cyl'? r/2 : r;
+  const Bi=h*Lc/k, tau=rho*cp*Lc/h;
+  const badge=$('t_badge');
+  if(Bi<0.1){badge.className='badge ok';badge.textContent='✅ Bi = '+fmt(Bi,3)+' < 0.1 → طريقة الكتلة المركزة صالحة (Lumped valid)';}
+  else{badge.className='badge no';badge.textContent='⚠️ Bi = '+fmt(Bi,3)+' > 0.1 → استخدم مخططات Heisler (المنحنى تقريبي توضيحي)';}
+  $('t_lc').textContent=fmt(Lc,4); $('t_bi').textContent=fmt(Bi,3); $('t_tau').textContent=fmt(tau);
+  $('t_half').textContent=fmt(tau*Math.LN2);
+  const tt=[],TT=[];
+  for(let i=0;i<=60;i++){ const t2=4*tau*i/60; tt.push(+(t2/60).toFixed(2)); TT.push(Tinf+(Ti-Tinf)*Math.exp(-t2/tau)); }
+  mkChart('lumpChart',{type:'line',data:{labels:tt,datasets:[{label:'T(t) °C',data:TT,borderColor:'#22d3ee',borderWidth:2.5,pointRadius:0,fill:true,backgroundColor:'rgba(34,211,238,.08)'}]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},title:{display:true,text:'Transient Cooling / Heating Curve'}},scales:{x:{title:{display:true,text:'t (min)'},grid:GRID},y:{title:{display:true,text:'T (°C)'},grid:GRID}}}});
+}
+['t_shape','t_r','t_k','t_rho','t_cp','t_h','t_ti','t_tinf'].forEach(id=>$(id).addEventListener('input',simM4));
+
+/* ================= M5 SIM ================= */
+function simM5(){
+  const L=+$('e_L').value,u=+$('e_u').value,p=propAt(AIR,+$('e_tf').value),Ts=+$('e_ts').value,Tinf=+$('e_tinf').value;
+  const Re=u*L/p.nu;
+  const reg=$('e_regime');
+  if(Re<5e5){reg.className='badge ok';reg.textContent='جريان صفيحي Laminar على كامل الصفيحة (Re < 5×10⁵)';}
+  else{reg.className='badge warn';reg.textContent='جريان مختلط Combined: صفيحي ثم اضطرابي بعد x_cr';}
+  const Nu= Re<5e5 ? 0.664*Math.sqrt(Re)*Math.pow(p.Pr,1/3) : (0.037*Math.pow(Re,0.8)-871)*Math.pow(p.Pr,1/3);
+  const h=Nu*p.k/L;
+  const delta= Re<5e5 ? 5*L/Math.sqrt(Re) : 0.37*L*Math.pow(Re,-0.2);
+  $('e_re').textContent=fmt(Re); $('e_nu').textContent=fmt(Nu); $('e_h').textContent=fmt(h);
+  $('e_delta').textContent=fmt(delta*1000); $('e_q').textContent=fmt(h*L*(Ts-Tinf));
+  const xs=[],hs=[]; const xcr=5e5*p.nu/u;
+  for(let i=1;i<=60;i++){ const x=L*i/60; const Rx=u*x/p.nu; let hx;
+    if(Rx<5e5) hx=0.332*Math.pow(Rx,0.5)*Math.pow(p.Pr,1/3)*p.k/x;
+    else hx=0.0296*Math.pow(Rx,0.8)*Math.pow(p.Pr,1/3)*p.k/x;
+    xs.push(+x.toFixed(3)); hs.push(+hx.toFixed(2)); }
+  mkChart('plateChart',{type:'line',data:{labels:xs,datasets:[{label:'h_x (W/m²·K)',data:hs,borderColor:'#f59e0b',borderWidth:2.5,pointRadius:0,fill:true,backgroundColor:'rgba(245,158,11,.08)'}]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},title:{display:true,text:'Local h(x) — notice the jump at transition (x_cr ≈ '+fmt(xcr,3)+' m)'}},scales:{x:{title:{display:true,text:'x (m)'},grid:GRID},y:{title:{display:true,text:'h_x'},grid:GRID}}}});
+}
+['e_L','e_u','e_tf','e_ts','e_tinf'].forEach(id=>$(id).addEventListener('input',simM5));
+
+/* ================= M6 SIM ================= */
+function simM6(){
+  const L=+$('n_L').value,W=+$('n_w').value,Ts=+$('n_ts').value,Tinf=+$('n_tinf').value;
+  const Tf=(Ts+Tinf)/2+273.15, p=propAt(AIR,Tf), dT=Ts-Tinf, beta=1/Tf;
+  const Gr=G*beta*Math.abs(dT)*Math.pow(L,3)/(p.nu*p.nu), Ra=Gr*p.Pr;
+  const Nu=Math.pow(0.825+0.387*Math.pow(Ra,1/6)/Math.pow(1+Math.pow(0.492/p.Pr,9/16),8/27),2);
+  const h=Nu*p.k/L, q=h*(L*W)*dT;
+  const badge=$('n_badge');
+  if(Ra<1e9){badge.className='badge ok';badge.textContent='الطبقة الحدودية صفيحية Laminar (Ra < 10⁹)';}
+  else{badge.className='badge warn';badge.textContent='الطبقة الحدودية اضطرابية Turbulent (Ra > 10⁹)';}
+  $('n_gr').textContent=fmt(Gr); $('n_ra').textContent=fmt(Ra); $('n_nu').textContent=fmt(Nu);
+  $('n_h').textContent=fmt(h); $('n_q').textContent=fmt(q);
+  const ras=[],nus=[];
+  for(let i=0;i<=50;i++){ const r2=Math.pow(10,3+i*(12-3)/50);
+    ras.push(r2); nus.push(Math.pow(0.825+0.387*Math.pow(r2,1/6)/Math.pow(1+Math.pow(0.492/p.Pr,9/16),8/27),2)); }
+  mkChart('natChart',{type:'scatter',data:{datasets:[
+    {label:'Churchill–Chu curve',data:ras.map((r2,i)=>({x:r2,y:nus[i]})),showLine:true,borderColor:'#22d3ee',borderWidth:2,pointRadius:0},
+    {label:'نقطة عملك الحالية',data:[{x:Ra,y:Nu}],pointRadius:8,pointBackgroundColor:'#ef4444',pointBorderColor:'#fff'}]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom',labels:{boxWidth:14}},title:{display:true,text:'Nu vs Ra (log–log)'}},scales:{x:{type:'logarithmic',title:{display:true,text:'Ra_L'},grid:GRID},y:{type:'logarithmic',title:{display:true,text:'Nu'},grid:GRID}}}});
+}
+['n_L','n_w','n_ts','n_tinf'].forEach(id=>$(id).addEventListener('input',simM6));
+
+/* ================= M7 SIM ================= */
+function simM7(){
+  const fl=$('i_fluid').value, Tm=+$('i_Tm').value, D=+$('i_D').value, L=+$('i_L').value, md=+$('i_mdot').value;
+  const p= fl==='w'? propAt(WAT,Tm) : propAt(AIR,Tm);
+  const rho=p.rho!==undefined?p.rho:1.2; // air density approx not in table -> compute
+  const rhoV= fl==='w'? p.rho : 101325/(287*Tm);
+  const Re=4*md/(Math.PI*D*p.mu);
+  const Ac=Math.PI*D*D/4, um=md/(rhoV*Ac);
+  const reg=$('i_regime');
+  let Nu, entry;
+  if(Re<2300){ reg.className='badge ok'; reg.textContent='صفيحي Laminar (Re < 2300)';
+    Nu= $('i_cond').value==='ts'?3.66:4.36; entry=0.05*Re*p.Pr*D; }
+  else if(Re<10000){ reg.className='badge warn'; reg.textContent='انتقالي Transitional — النتائج تقريبية (Dittus–Boelter)';
+    Nu=0.023*Math.pow(Re,0.8)*Math.pow(p.Pr,$('i_mode').value==='h'?0.4:0.3); entry=10*D; }
+  else{ reg.className='badge no'; reg.textContent='اضطرابي Turbulent (Re ≥ 10⁴) — Dittus–Boelter';
+    Nu=0.023*Math.pow(Re,0.8)*Math.pow(p.Pr,$('i_mode').value==='h'?0.4:0.3); entry=10*D; }
+  const h=Nu*p.k/D;
+  const f= Re<2300? 64/Re : 0.316*Math.pow(Re,-0.25);
+  const dp=f*(L/D)*rhoV*um*um/2, pow=dp*(md/rhoV);
+  $('i_re').textContent=fmt(Re); $('i_um').textContent=fmt(um,3); $('i_entry').textContent=fmt(entry,3);
+  $('i_nu').textContent=fmt(Nu); $('i_h').textContent=fmt(h); $('i_dp').textContent=fmt(dp); $('i_pow').textContent=fmt(pow,3);
+}
+['i_fluid','i_Tm','i_D','i_L','i_mdot','i_cond','i_mode'].forEach(id=>$(id).addEventListener('input',simM7));
+
+/* ================= M8 SIM ================= */
+function simM8(){
+  const T=+$('r_T').value, e=+$('r_eps').value;
+  const Eb=SIG*Math.pow(T,4);
+  $('r_eb').textContent=fmt(Eb); $('r_gray').textContent=fmt(e*Eb);
+  const T1=+$('r_T1').value,T2=+$('r_T2').value,e1=+$('r_e1').value,e2=+$('r_e2').value,es=+$('r_es').value,N=Math.max(0,Math.round(+$('r_N').value));
+  const R0=1/e1+1/e2-1, Rtot=R0+N*(2/es-1);
+  const q0=SIG*(Math.pow(T1,4)-Math.pow(T2,4))/R0, q1=SIG*(Math.pow(T1,4)-Math.pow(T2,4))/Rtot;
+  $('r_q0').textContent=fmt(q0); $('r_q1').textContent=fmt(q1);
+  $('r_red').textContent=fmt(100*(1-q1/q0),1)+'%';
+  const Ts2=[],Eb2=[],Eg2=[];
+  for(let i=0;i<=60;i++){ const T3=200+i*(1500-200)/60; Ts2.push(T3); Eb2.push(SIG*Math.pow(T3,4)/1000); Eg2.push(e*SIG*Math.pow(T3,4)/1000); }
+  mkChart('radChart',{type:'line',data:{labels:Ts2,datasets:[
+    {label:'E_b جسم أسود (kW/m²)',data:Eb2,borderColor:'#ef4444',borderWidth:2.5,pointRadius:0},
+    {label:'E سطح رمادي ε (kW/m²)',data:Eg2,borderColor:'#22d3ee',borderWidth:2,pointRadius:0,borderDash:[6,4]},
+    {label:'نقطتك T',data:Ts2.map(t2=>Math.abs(t2-T)<=10?Eb/1000:null),pointRadius:6,pointBackgroundColor:'#f59e0b',showLine:false}]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom',labels:{boxWidth:14}},title:{display:true,text:'Blackbody Emissive Power E_b = σT⁴'}},scales:{x:{title:{display:true,text:'T (K)'},grid:GRID},y:{title:{display:true,text:'E (kW/m²)'},grid:GRID}}}});
+}
+['r_T','r_eps','r_T1','r_T2','r_e1','r_e2','r_es','r_N'].forEach(id=>$(id).addEventListener('input',simM8));
+
+/* ================= M9 SIM ================= */
+function hxTab(t){
+  $('tab_l').classList.toggle('sel',t==='l'); $('tab_e').classList.toggle('sel',t==='e');
+  $('pane_l').style.display= t==='l'?'block':'none'; $('pane_e').style.display= t==='e'?'block':'none';
+  if(t==='l')simLMTD(); else simNTU();
+}
+function simLMTD(){
+  const thi=+$('x_thi').value,tho=+$('x_tho').value,tci=+$('x_tci').value,tco=+$('x_tco').value;
+  const arr=$('x_arr').value,U=+$('x_U').value,q=+$('x_q').value*1000;
+  let d1,d2;
+  if(arr==='cf'){ d1=thi-tco; d2=tho-tci; } else { d1=thi-tci; d2=tho-tco; }
+  if(d1<=0||d2<=0||d1===d2){ $('x_lmtd').textContent='—'; return; }
+  const lm=(d1-d2)/Math.log(d1/d2);
+  $('x_dt1').textContent=fmt(d1); $('x_dt2').textContent=fmt(d2); $('x_lmtd').textContent=fmt(lm);
+  $('x_A').textContent=fmt(q/(U*lm),2);
+  const xs=[0,0.25,0.5,0.75,1];
+  const hot=xs.map(x=>thi+(tho-thi)*x);
+  const cold= arr==='cf'? xs.map(x=>tco+(tci-tco)*x) : xs.map(x=>tci+(tco-tci)*x);
+  mkChart('hxChart',{type:'line',data:{labels:xs,datasets:[
+    {label:'المائع الساخن T_h',data:hot,borderColor:'#ef4444',borderWidth:2.5,pointRadius:0},
+    {label:'المائع البارد T_c',data:cold,borderColor:'#22d3ee',borderWidth:2.5,pointRadius:0}]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom',labels:{boxWidth:14}},title:{display:true,text:'Temperature distribution ('+(arr==='cf'?'Counter-flow':'Parallel-flow')+')'}},scales:{x:{title:{display:true,text:'x / L'},grid:GRID},y:{title:{display:true,text:'T (°C)'},grid:GRID}}}});
+}
+function simNTU(){
+  const Cc=+$('y_mc').value*+$('y_cpc').value, Ch=+$('y_mh').value*+$('y_cph').value;
+  const Cmin=Math.min(Cc,Ch), Cmax=Math.max(Cc,Ch), Cr=Cmin/Cmax;
+  const NTU=+$('y_U2').value*+$('y_A2').value/Cmin;
+  const arr=$('y_arr2').value; let eps;
+  if(arr==='c0') eps=1-Math.exp(-NTU);
+  else if(arr==='cf') eps= Math.abs(Cr-1)<1e-9? NTU/(1+NTU) : (1-Math.exp(-NTU*(1-Cr)))/(1-Cr*Math.exp(-NTU*(1-Cr)));
+  else eps=(1-Math.exp(-NTU*(1+Cr)))/(1+Cr);
+  const thi=+$('y_thi').value,tci=+$('y_tci').value;
+  const q=eps*Cmin*(thi-tci);
+  $('y_cc').textContent=fmt(Cmin)+' / '+fmt(Cmax); $('y_cr').textContent=fmt(Cr,3); $('y_ntu').textContent=fmt(NTU,3);
+  $('y_eps').textContent=fmt(eps,3); $('y_q').textContent=fmt(q/1000);
+  $('y_tho').textContent=fmt(thi-q/Ch); $('y_tco').textContent=fmt(tci+q/Cc);
+}
+['x_thi','x_tho','x_tci','x_tco','x_arr','x_U','x_q'].forEach(id=>$(id).addEventListener('input',simLMTD));
+['y_mc','y_cpc','y_mh','y_cph','y_U2','y_A2','y_thi','y_tci','y_arr2'].forEach(id=>$(id).addEventListener('input',simNTU));
+
+/* ================= M10 SIM ================= */
+function simDB(){
+  const fl=$('d_fluid').value, T=+$('d_T').value;
+  const p= fl==='a'? propAt(AIR,T):propAt(WAT,T);
+  let html='';
+  if(fl==='a'){
+    html+=`<div class="out"><small>ν (m²/s)</small><b>${p.nu.toExponential(2)}</b></div>
+    <div class="out"><small>k (W/m·K)</small><b>${fmt(p.k,4)}</b></div>
+    <div class="out"><small>α (m²/s)</small><b>${p.al.toExponential(2)}</b></div>
+    <div class="out"><small>Pr</small><b>${fmt(p.Pr,3)}</b></div>
+    <div class="out ok"><small>β = 1/T_f (1/K)</small><b>${(1/T).toExponential(3)}</b></div>`;
+  }else{
+    const nu=p.mu/p.rho, al=p.k/(p.rho*p.cp);
+    html+=`<div class="out"><small>ρ (kg/m³)</small><b>${fmt(p.rho,1)}</b></div>
+    <div class="out"><small>c_p (J/kg·K)</small><b>${fmt(p.cp,0)}</b></div>
+    <div class="out"><small>μ (N·s/m²)</small><b>${p.mu.toExponential(2)}</b></div>
+    <div class="out"><small>k (W/m·K)</small><b>${fmt(p.k,3)}</b></div>
+    <div class="out"><small>ν (m²/s)</small><b>${nu.toExponential(2)}</b></div>
+    <div class="out"><small>α (m²/s)</small><b>${al.toExponential(2)}</b></div>
+    <div class="out ok"><small>Pr</small><b>${fmt(p.Pr,2)}</b></div>`;
+  }
+  $('d_out').innerHTML=html;
+}
+['d_fluid','d_T'].forEach(id=>$(id).addEventListener('input',simDB));
+
+/* ================= QUIZZES ================= */
+const QUIZ={
+m1:[
+ {q:'أي آلية انتقال حرارة لا تحتاج إلى وسط مادي (تنتقل في الفراغ بسرعة الضوء)؟',o:['التوصيل Conduction','الحمل Convection','الإشعاع Radiation','التبخر Evaporation'],a:2,ex:'الإشعاع موجات كهرومغناطيسية لا يحتاج وسطاً — ولهذا تصل طاقة الشمس للأرض.'},
+ {q:'في قانون Fourier للتوصيل، الإشارة السالبة موجودة لأن:',o:['الحرارة تنتقل باتجاه انخفاض درجة الحرارة','k قيمة سالبة','لجعل q سالبة دائماً','بسبب الحمل المصاحب'],a:0,ex:'التدرج dT/dx سالب باتجاه سريان الحرارة، فالإشارة السالبة تجعل q كمية موجبة.'},
+ {q:'وحدة معامل الحمل h هي:',o:['W/m·K','W/m²·K','W/m³·K','J/kg·K'],a:1,ex:'من q = hA(Ts−T∞) نستنتج h بوحدة W/m²·K.'}],
+m2:[
+ {q:'المقاومة الحرارية لجدار مستوٍ سماكته L وتوصيليته k ومساحته A:',o:['kA/L','L/(kA)','1/(hA)','ln(ro/ri)/(2πkL)'],a:1,ex:'R = L/(kA) — تتزايد بالسمك وتقل بزيادة k.'},
+ {q:'نصف القطر الحرج للعزل حول أنبوب أسطواني:',o:['k/h','2k/h','h/k','D/2'],a:0,ex:'لـ r₂ < r_cr إضافة العزل قد تزيد الفقد بسبب زيادة مساحة الحمل الخارجية.'},
+ {q:'في جدار متعدد الطبقات بحالة مستقرة، كمية الحرارة المارة بكل الطبقات:',o:['تتناقص تدريجياً','تتزايد تدريجياً','ثابتة ومتساوية','تعتمد على k فقط'],a:2,ex:'بالمماثلة مع التيار الكهربائي في مقاومات على التوالي: q واحدة عبر الجميع.'}],
+m3:[
+ {q:'معامل الزعنفة m يساوي:',o:['√(hP/kAc)','hP/kAc','kAc/hP','√(kAc/hP)'],a:0,ex:'m = √(hP/kAc) ويحكم شكل منحنى الحرارة على الزعنفة.'},
+ {q:'كفاءة الزعنفة η_f هي نسبة:',o:['q_f إلى حرارة الزعنفة لو كانت كلها عند T_b','q_f إلى q بدون زعنفة','T_tip إلى T_base','hA إلى kAc'],a:0,ex:'η_f = q_act/(hA_f θ_b) — المثالي أن تبقى الزعنفة كلها عند حرارة القاعدة.'},
+ {q:'زعنفة تعتبر مجدية عملياً عندما تكون فعاليتها ε_f:',o:['أقل من 1','تساوي 1','أكبر من أو تساوي 2','سالبة'],a:2,ex:'إن كانت ε_f < 2 فالزعنفة إضافة وزنية بلا فائدة حقيقية.'}],
+m4:[
+ {q:'طريقة الكتلة المركزة (Lumped Capacitance) صالحة عندما:',o:['Bi < 0.1','Bi > 0.1','Fo < 0.1','Re > 10⁴'],a:0,ex:'أي عندما تهمل المقاومة الداخلية للتوصيل أمام مقاومة الحمل السطحية.'},
+ {q:'الطول المميز L_c لكرة نصف قطرها r₀ هو:',o:['r₀','r₀/2','r₀/3','2r₀'],a:2,ex:'L_c = V/A_s = (4/3πr³)/(4πr²) = r/3.'},
+ {q:'عدد Fourier يعرَّف بـ:',o:['hL/k','αt/L_c²','gβΔTL³/ν²','uL/ν'],a:1,ex:'Fo زمن لا بعدي؛ والأس في حل Lumped يساوي Bi·Fo.'}],
+m5:[
+ {q:'العدد الذي يحدد نظام الجريان (صفيحي/اضطرابي) فوق صفيحة مستوية هو:',o:['Prandtl','Nusselt','Reynolds','Grashof'],a:2,ex:'الانتقال عند Re_cr ≈ 5×10⁵ للصفيحة المستوية.'},
+ {q:'عدد Nusselt فيزيائياً يمثل:',o:['نسبة قوى الطفو إلى اللزوجة','تعزيز الحمل مقارنة بالتوصيل الخالص عبر نفس طبقة المائع','نسبة السماكتين الحدوديتين','معامل الاحتكاك'],a:1,ex:'Nu = hL/k ؛ Nu = 1 يعني توصيلاً خالصاً.'},
+ {q:'سائل معدني (Pr ≪ 1) تكون طبقته الحدودية الحرارية مقارنة بالهيدروديناميكية:',o:['أرق بكثير','أسمك بكثير','متساوية','معدومة'],a:1,ex:'الحرارة تنتشر بسرعة في المعادن السائلة فتتغلب الطبقة الحرارية.'}],
+m6:[
+ {q:'عدد Grashof هو نسبة:',o:['قوى الطفو إلى القوى اللزجة','القصور إلى اللزوجة','الحمل إلى التوصيل','الرفع إلى الوزن'],a:0,ex:'Gr = gβΔTL³/ν² — نظير Reynolds في الحمل الطبيعي.'},
+ {q:'للغاز المثالي، معامل التمدد الحراري β يساوي:',o:['T_f','1/T_f (بالكلفن)','Pr/ν','ρg'],a:1,ex:'β = 1/T_f حيث T_f بالكلفن = (T_s+T∞)/2.'},
+ {q:'في تجويف أفقي مسخَّن من أسفل، قبل Ra = 1708 يكون الانتقال:',o:['حملاً اضطرابياً','توصيلاً خالصاً Nu = 1','إشعاعاً','خلايا دوّامة'],a:1,ex:'فوق 1708 تتكون خلايا Rayleigh–Bénard الدوّامة.'}],
+m7:[
+ {q:'في الجريان الصفيحي المستقر داخل أنبوب بـ Tₛ ثابتة، Nu يساوي:',o:['0.023Re⁰·⁸Pr⁰·⁴','3.66','4.36','0.664'],a:1,ex:'ثابت لا يعتمد على Re أو Pr؛ ولـ q″ ثابتة يكون 4.36.'},
+ {q:'أس n في معادلة Dittus–Boelter لحالة تسخين المائع:',o:['0.3','0.4','0.8','1/3'],a:1,ex:'n = 0.4 تسخين و 0.3 تبريد.'},
+ {q:'معظم مقاومة الحرارة في جريان اضطرابي داخل أنبوب تتركز في:',o:['قلب الجريان المضطرب','الطبقة الرقيقة اللزجة قرب الجدار','نصف القطر الأوسط','مخرج الأنبوب'],a:1,ex:'لهذا يرفع الاضطراب قيمة h بكسر الطبقة التحتيّة اللامينارية.'}],
+m8:[
+ {q:'سطح أسود (Blackbody) قيمتا ε و α له:',o:['0 و 0','1 و 1','0.5 و 0.5','تعتمد على اللون'],a:1,ex:'يمتص كل الإشعاع الساقط ويبعث الحد الأقصى σT⁴.'},
+ {q:'قانون Kirchhoff للأسطح الرمادية ينص على:',o:['α + ρ + τ = 1','ε = α','F₁₂ = F₂₁','ε = 1 − ρ'],a:1,ex:'الانبعاثية تساوي الامتصاصية عند نفس T وλ.'},
+ {q:'علاقة الجمع لعوامل الشكل في حيّز مغلق من N سطحاً:',o:['ΣF_ij = 0','ΣF_ij = 1','F_ii = 1 دائماً','A_iF_ij = A_iF_ji'],a:1,ex:'كل الإشعاع المغادر من سطح i يجب أن يقع على أسطح الحيّز.'}],
+m9:[
+ {q:'لنفس درجات الحرارة الطرفية، أي نمطين له LMTD أكبر؟',o:['المتوازي Parallel','المعاكس Counter-flow','متساويان دائماً','يعتمد على U'],a:1,ex:'لذلك المعاكس يحتاج مساحة أقل لنفس الحمل الحراري.'},
+ {q:'عدد وحدات النقل NTU يعرَّف بـ:',o:['UA/C_min','C_min/UA','q/C_max','hA(T₁−T₂)'],a:0,ex:'NTU = UA/C_min — كلما كبر ارتفعت الفعالية ε.'},
+ {q:'في مكثف (بخار يتكثف عند T ثابتة) تكون قيمة C_r:',o:['1','0.5','0','∞'],a:2,ex:'المائع متغير الطور C→∞ ⇒ C_r = 0 و ε = 1−e⁻ᴺᵀᵁ.'}],
+m10:[
+ {q:'في الجريان الخارجي على صفيحة أو أسطوانة، تُقيَّم خصائص المائع عند:',o:['T_s فقط','T∞ فقط','درجة حرارة الغشاء T_f = (T_s+T∞)/2','متوسط لوغاريتمي'],a:2,ex:'قاعدة عامة في المعادلات التجريبية (Churchill–Chu، Hilpert…).'},
+ {q:'قيمة Pr التقريبية للهواء عند درجة حرارة الغرفة:',o:['0.7','7','0.07','70'],a:0,ex:'لهذا كثير من معادلات الغازات تهمل تصحيح Pr.'},
+ {q:'أعلى توصيلية حرارية k بين الخيارات التالية:',o:['الفولاذ 15','الماء 0.6','الألومنيوم 237','الهواء 0.026'],a:2,ex:'المعادن النقية الأعلى k؛ والغازات والعوازل الأدنى.'}]
+};
+function buildQuiz(mid){
+  const box=$(mid+'-quiz'), qs=QUIZ[mid];
+  box.innerHTML='<h3>📝 تقييم ذاتي سريع <span>(اختبر فهمك)</span></h3>'+qs.map((it,i)=>
+    '<div class="qz"><p><b>س'+(i+1)+'.</b> '+it.q+'</p>'+
+    it.o.map((op,j)=>'<label class="opt"><input type="radio" name="'+mid+'q'+i+'" value="'+j+'"><span>'+op+'</span></label>').join('')+
+    '<p class="fb" id="'+mid+'q'+i+'fb"></p></div>').join('')+
+    '<button class="btn" onclick="checkQuiz(\''+mid+'\')">تحقق من الإجابات ✔</button><span class="score" id="'+mid+'-score"></span>';
+}
+function checkQuiz(mid){
+  let s=0;
+  QUIZ[mid].forEach((it,i)=>{
+    const opts=document.querySelectorAll('input[name="'+mid+'q'+i+'"]');
+    const sel=document.querySelector('input[name="'+mid+'q'+i+'"]:checked');
+    const fb=$(mid+'q'+i+'fb');
+    opts.forEach(o=>o.closest('label').classList.remove('right','wrong'));
+    if(sel&&+sel.value===it.a){ s++; sel.closest('label').classList.add('right');
+      fb.className='fb ok'; fb.textContent='✔ أحسنت! '+it.ex; }
+    else{ if(sel)sel.closest('label').classList.add('wrong');
+      document.querySelector('input[name="'+mid+'q'+i+'"][value="'+it.a+'"]').closest('label').classList.add('right');
+      fb.className='fb no'; fb.textContent='✘ الإجابة الصحيحة: '+it.o[it.a]+' — '+it.ex; }
+  });
+  $(mid+'-score').textContent='النتيجة: '+s+' / '+QUIZ[mid].length;
+}
+
+/* ================= INIT ================= */
+window.addEventListener('load',()=>{
+  simM1(); simM2(); simM3(); simM4(); simM5(); simM6(); simM7(); simM8(); simLMTD(); simDB();
+  for(let i=1;i<=10;i++) buildQuiz('m'+i);
+});
+</script>
+</body>
+</html>
