@@ -12,8 +12,8 @@ function renderLatex(text) {
   if (!text) return '';
   try {
     const cleaned = String(text)
-      .replace(/\\\[\s*([\s\S]*?)\s*\\\]/g, '$1')
-      .replace(/\\s*([\s\S]*?)\s*\/g, '$1');
+      .replace(/\\\[([\s\S]*?)\\\]/g, '$1')
+      .replace(/\\\(([\s\S]*?)\\\)/g, '$1');
     return katex.renderToString(cleaned, { throwOnError: false, output: 'html' });
   } catch (e) {
     return String(text);
