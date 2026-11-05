@@ -5,6 +5,25 @@ import {
   CheckCircle2, XCircle, Info, ChevronRight, ChevronDown, Play, 
   ArrowRight, Shield, Cpu, Gauge
 } from 'lucide-react';
+import katex from 'katex';
+
+// Render a LaTeX string (with optional \( \) delimiters) into HTML via KaTeX
+function renderLatex(text) {
+  if (!text) return '';
+  try {
+    const cleaned = String(text)
+      .replace(/\\\[\s*([\s\S]*?)\s*\\\]/g, '$1')
+      .replace(/\\s*([\s\S]*?)\s*\/g, '$1');
+    return katex.renderToString(cleaned, { throwOnError: false, output: 'html' });
+  } catch (e) {
+    return String(text);
+  }
+}
+
+function Latex({ math }) {
+  const html = renderLatex(math);
+  return <span dir="ltr" dangerouslySetInnerHTML={{ __html: html }} />;
+}
 
 export default function App() {
   const [activeTab, setActiveTab] = useState('curriculum');
@@ -43,7 +62,7 @@ export default function App() {
       id: 3,
       title: 'Lecture 3: Extended Surfaces (Fins)',
       arabicTitle: 'الأسطح الممتدة (الزعانف)',
-      summary: 'معادلة الزعنفة، الشروط الحدية للطرف، كفاءة الزعنفة \\(\\eta_f\\) وفاعليتها \\(\\varepsilon_f\\).',
+      summary: 'معادلة الزعنفة، الشروط الحدية للطرف، كفاءة الزعنفة \\eta_f وفاعليتها \\varepsilon_f.',
       keyConcepts: [
         { name: 'Fin Parameter (m)', eq: 'm = \\sqrt{\\frac{h P}{k A_c}}', desc: 'مُعامل المعادلة التفاضلية للزعنفة' },
         { name: 'Insulated Tip Profile', eq: '\\frac{\\theta(x)}{\\theta_b} = \\frac{\\cosh(m(L-x))}{\\cosh(mL)}', desc: 'توزيع الحرارة لزعنفة طرفها معزول' },
@@ -59,7 +78,7 @@ export default function App() {
       summary: 'طريقة السعة المجمعة (Lumped Capacitance)، رقم بيوت Bi، رقم فوريه Fo، ومخططات هايسلر.',
       keyConcepts: [
         { name: 'Biot Number', eq: 'Bi = \\frac{h L_c}{k} < 0.1', desc: 'شرط صلاحية طريقة السعة المجمعة' },
-        { name: 'Lumped Temp Ratio', eq: '\\frac{T(t) - T_\\infty}{T_i - T_\\infty} = \\exp\\left(-\\frac{t}{\\tau}\\right)', desc: 'تغير الحرارة مع الزمن حيث \\(\\tau = \\frac{\\rho V c_p}{h A_s}\\)' },
+        { name: 'Lumped Temp Ratio', eq: '\\frac{T(t) - T_\\infty}{T_i - T_\\infty} = \\exp\\left(-\\frac{t}{\\tau}\\right)', desc: 'تغير الحرارة مع الزمن حيث \\tau = \\frac{\\rho V c_p}{h A_s}' },
         { name: 'Fourier Number', eq: 'Fo = \\frac{\\alpha t}{L_c^2}', desc: 'الزمن الحراري المبعد' }
       ],
       assumptions: ['Bi < 0.1 for Lumped', 'Uniform spatial temp', 'Constant fluid props'],
@@ -121,7 +140,7 @@ export default function App() {
       id: 9,
       title: 'Lecture 9: Heat Exchangers',
       arabicTitle: 'المبادلات الحرارية',
-      summary: 'أنواع المبادلات، طريقة فرق درجات الحرارة اللوجاريتمي (LMTD)، طريقة الفاعلية (\\(\\varepsilon\\)-NTU)، ومعامل الاتساخ.',
+      summary: 'أنواع المبادلات، طريقة فرق درجات الحرارة اللوجاريتمي (LMTD)، طريقة الفاعلية (\\varepsilon-NTU)، ومعامل الاتساخ.',
       keyConcepts: [
         { name: 'LMTD Equation', eq: '\\Delta T_{lm} = \\frac{\\Delta T_1 - \\Delta T_2}{\\ln(\\Delta T_1 / \\Delta T_2)}', desc: 'المتوسط اللوجاريتمي لفرق الحرارة' },
         { name: 'Effectiveness', eq: '\\varepsilon = \\frac{q}{q_{max}} = \\frac{q}{C_{min}(T_{h,in} - T_{c,in})}', desc: 'فاعلية المبادل الحراري' },
@@ -230,7 +249,7 @@ export default function App() {
       explanation: 'ممتاز! رقم جراشوف Gr = g \\beta (T_s - T_\\infty) L^3 / \\nu^2 يقيس التوازن بين قوى الطفو الناتجة عن اختلاف الكثافة وقوى اللزوجة المعيقة للحركة.'
     },
     {
-      q: 'زعنفة طويلة جداً (Infinitely Long Fin) ذات مقطع ثابت، ما هي كفاءتها النظرية \\(\\eta_f\\) إذا كان \\(mL = 2.0\\)؟',
+      q: 'زعنفة طويلة جداً (Infinitely Long Fin) ذات مقطع ثابت، ما هي كفاءتها النظرية \\eta_f إذا كان mL = 2.0؟',
       options: [
         '100%',
         '50%',
@@ -238,7 +257,7 @@ export default function App() {
         '33.3%'
       ],
       correct: 2,
-      explanation: 'أحسنت! لحساب كفاءة الزعنفة المقفلة أو الطويلة، \\(\\eta_f = \\tanh(mL) / mL\\). بالتعويض: \\(\\tanh(2.0)/2.0 = 0.964 / 2.0 = 0.482\\) أي 48.2%.'
+      explanation: 'أحسنت! لحساب كفاءة الزعنفة المقفلة أو الطويلة، \\eta_f = \\tanh(mL) / mL. بالتعويض: \\tanh(2.0)/2.0 = 0.964 / 2.0 = 0.482 أي 48.2%.'
     }
   ];
 
@@ -407,8 +426,8 @@ export default function App() {
                         {current.keyConcepts.map((concept, idx) => (
                           <div key={idx} className="bg-slate-950 border border-slate-800 p-4 rounded-xl space-y-2">
                             <div className="text-xs font-bold text-orange-300">{concept.name}</div>
-                            <div className="bg-slate-900 p-2.5 rounded-lg font-mono text-xs text-emerald-400 text-center dir-ltr border border-slate-800">
-                              {concept.eq}
+                            <div className="bg-slate-900 p-2.5 rounded-lg text-sm text-emerald-400 text-center overflow-x-auto border border-slate-800">
+                              <Latex math={concept.eq} />
                             </div>
                             <div className="text-xs text-slate-400">{concept.desc}</div>
                           </div>
@@ -491,7 +510,7 @@ export default function App() {
                   <div className="space-y-3 text-xs">
                     <div>
                       <div className="flex justify-between text-slate-300 mb-1">
-                        <span>الموصلية الحرارية للزعنفة \\(k\\) [W/m·K]:</span>
+                        <span>الموصلية الحرارية للزعنفة {<Latex math="k" />} [W/m·K]:</span>
                         <span className="font-mono text-orange-400">{finK}</span>
                       </div>
                       <input
@@ -506,7 +525,7 @@ export default function App() {
 
                     <div>
                       <div className="flex justify-between text-slate-300 mb-1">
-                        <span>معامل الحمل الحراري \\(h\\) [W/m²·K]:</span>
+                        <span>معامل الحمل الحراري {<Latex math="h" />} [W/m²·K]:</span>
                         <span className="font-mono text-orange-400">{finH}</span>
                       </div>
                       <input
@@ -521,7 +540,7 @@ export default function App() {
 
                     <div>
                       <div className="flex justify-between text-slate-300 mb-1">
-                        <span>طول الزعنفة \\(L\\) [m]:</span>
+                        <span>طول الزعنفة {<Latex math="L" />} [m]:</span>
                         <span className="font-mono text-orange-400">{finL}</span>
                       </div>
                       <input
@@ -537,7 +556,7 @@ export default function App() {
 
                     <div className="grid grid-cols-2 gap-3 pt-2 border-t border-slate-800">
                       <div>
-                        <label className="block text-slate-400 mb-1">درجة حرارة القاعدة \\(T_b\\) (°C):</label>
+                        <label className="block text-slate-400 mb-1">درجة حرارة القاعدة {<Latex math="T_b" />} (°C):</label>
                         <input
                           type="number"
                           value={finTb}
@@ -546,7 +565,7 @@ export default function App() {
                         />
                       </div>
                       <div>
-                        <label className="block text-slate-400 mb-1">حرارة المائع المحيط \\(T_\\infty\\) (°C):</label>
+                        <label className="block text-slate-400 mb-1">حرارة المائع المحيط {<Latex math="T_\\infty" />} (°C):</label>
                         <input
                           type="number"
                           value={finTinf}
@@ -561,23 +580,23 @@ export default function App() {
                   <div className="bg-slate-950 border border-slate-800 p-4 rounded-xl space-y-2 text-xs">
                     <div className="font-bold text-slate-200 border-b border-slate-800 pb-1">النتائج المحسوبة:</div>
                     <div className="flex justify-between">
-                      <span className="text-slate-400">معامل الزعنفة \\(m\\):</span>
+                      <span className="text-slate-400">معامل الزعنفة {<Latex math="m" />}:</span>
                       <span className="font-mono text-emerald-400">{m.toFixed(2)} m⁻¹</span>
                     </div>
                     <div className="flex justify-between">
-                      <span className="text-slate-400">المقدار \\(m L\\):</span>
+                      <span className="text-slate-400">المقدار {<Latex math="m L" />}:</span>
                       <span className="font-mono text-emerald-400">{mL.toFixed(3)}</span>
                     </div>
                     <div className="flex justify-between">
-                      <span className="text-slate-400">معدل نقل الحرارة \\(q_f\\):</span>
+                      <span className="text-slate-400">معدل نقل الحرارة {<Latex math="q_f" />}:</span>
                       <span className="font-mono text-amber-400">{qFinInsulated.toFixed(2)} W</span>
                     </div>
                     <div className="flex justify-between">
-                      <span className="text-slate-400">كفاءة الزعنفة \\(\\eta_f\\):</span>
+                      <span className="text-slate-400">كفاءة الزعنفة {<Latex math="\\eta_f" />}:</span>
                       <span className="font-mono text-sky-400">{(etaFin * 100).toFixed(1)}%</span>
                     </div>
                     <div className="flex justify-between">
-                      <span className="text-slate-400">فاعلية الزعنفة \\(\\varepsilon_f\\):</span>
+                      <span className="text-slate-400">فاعلية الزعنفة {<Latex math="\\varepsilon_f" />}:</span>
                       <span className="font-mono text-indigo-400">{epsilonFin.toFixed(2)}</span>
                     </div>
                   </div>
@@ -586,7 +605,7 @@ export default function App() {
                 {/* Plot Column */}
                 <div className="lg:col-span-7 bg-slate-900 border border-slate-800 p-5 rounded-2xl space-y-4 shadow-xl">
                   <h3 className="text-sm font-bold text-slate-200 flex items-center justify-between">
-                    <span>مخطط توزيع الحرارة على طول الزعنفة \\(T(x)\\)</span>
+                    <span>مخطط توزيع الحرارة على طول الزعنفة {<Latex math="T(x)" />}</span>
                     <span className="text-xs text-slate-400 font-normal">الحالة: طرف معزول (Insulated Tip)</span>
                   </h3>
 
@@ -621,7 +640,7 @@ export default function App() {
                   </div>
 
                   <div className="bg-slate-950/40 p-3 rounded-xl border border-slate-800 text-xs text-slate-400">
-                    <span className="text-orange-400 font-bold">توجيه أستاذ المادة:</span> لاحظ أنه كلما زادت قيمة الموصلية الحرارية \\(k\\)، يقل الانحدار الحراري ويصبح الطرف أكثر سخونة، مما يرفع من كفاءة الزعنفة \\(\\eta_f\\).
+                    <span className="text-orange-400 font-bold">توجيه أستاذ المادة:</span> لاحظ أنه كلما زادت قيمة الموصلية الحرارية {<Latex math="k" />}، يقل الانحدار الحراري ويصبح الطرف أكثر سخونة، مما يرفع من كفاءة الزعنفة {<Latex math="\\eta_f" />}.
                   </div>
                 </div>
 
@@ -642,7 +661,7 @@ export default function App() {
                   <div className="space-y-3 text-xs">
                     <div>
                       <div className="flex justify-between text-slate-300 mb-1">
-                        <span>معامل الحمل الحراري \\(h\\) [W/m²·K]:</span>
+                        <span>معامل الحمل الحراري {<Latex math="h" />} [W/m²·K]:</span>
                         <span className="font-mono text-orange-400">{trH}</span>
                       </div>
                       <input
@@ -657,7 +676,7 @@ export default function App() {
 
                     <div>
                       <div className="flex justify-between text-slate-300 mb-1">
-                        <span>الطول المميز \\(L_c = V/A_s\\) [m]:</span>
+                        <span>الطول المميز {<Latex math="L_c = V/A_s" />} [m]:</span>
                         <span className="font-mono text-orange-400">{trLc}</span>
                       </div>
                       <input
@@ -673,7 +692,7 @@ export default function App() {
 
                     <div>
                       <div className="flex justify-between text-slate-300 mb-1">
-                        <span>الزمن المستغرق \\(t\\) [seconds]:</span>
+                        <span>الزمن المستغرق {<Latex math="t" />} [seconds]:</span>
                         <span className="font-mono text-orange-400">{trTime} s</span>
                       </div>
                       <input
@@ -691,7 +710,7 @@ export default function App() {
                   <div className="bg-slate-950 border border-slate-800 p-4 rounded-xl space-y-2 text-xs">
                     <div className="font-bold text-slate-200 border-b border-slate-800 pb-1">تحليل رقم بيوت (Biot Number Check):</div>
                     <div className="flex justify-between">
-                      <span className="text-slate-400">رقم بيوت \\(Bi = h L_c / k\\):</span>
+                      <span className="text-slate-400">رقم بيوت {<Latex math="Bi = h L_c / k" />}:</span>
                       <span className={`font-mono font-bold ${biNum < 0.1 ? 'text-emerald-400' : 'text-rose-400'}`}>
                         {biNum.toFixed(4)}
                       </span>
@@ -708,7 +727,7 @@ export default function App() {
                       )}
                     </div>
                     <div className="flex justify-between pt-1">
-                      <span className="text-slate-400">الثابت الزمني \\(\\tau\\):</span>
+                      <span className="text-slate-400">الثابت الزمني {<Latex math="\\tau" />}:</span>
                       <span className="font-mono text-amber-400">{tau.toFixed(1)} seconds</span>
                     </div>
                     <div className="flex justify-between">
@@ -722,7 +741,7 @@ export default function App() {
                 {/* Plot Column */}
                 <div className="lg:col-span-7 bg-slate-900 border border-slate-800 p-5 rounded-2xl space-y-4 shadow-xl">
                   <h3 className="text-sm font-bold text-slate-200">
-                    منحنى التبريد الزمني exponential decay curve \\(T(t)\\)
+                    منحنى التبريد الزمني exponential decay curve {<Latex math="T(t)" />}
                   </h3>
 
                   <div className="bg-slate-950 border border-slate-800 p-4 rounded-xl h-64 flex flex-col justify-between">
@@ -768,7 +787,7 @@ export default function App() {
                     <Layers className="text-orange-400" size={22} />
                     سجل البيانات الهندسية (Interactive Data Book)
                   </h2>
-                  <p className="text-xs text-slate-400">خواص الهواء والماء وتقييم الخواص عند درجة حرارة الفيلم (Film Temperature \\(T_f\\))</p>
+                  <p className="text-xs text-slate-400">خواص الهواء والماء وتقييم الخواص عند درجة حرارة الفيلم (Film Temperature {<Latex math="T_f" />})</p>
                 </div>
               </div>
 
@@ -779,7 +798,7 @@ export default function App() {
                 </h3>
 
                 <div className="flex items-center gap-4 text-xs">
-                  <label className="text-slate-300">درجة حرارة الفيلم \\(T_f\\) (Kelvin):</label>
+                  <label className="text-slate-300">درجة حرارة الفيلم {<Latex math="T_f" />} (Kelvin):</label>
                   <input
                     type="range"
                     min="250"
@@ -793,27 +812,27 @@ export default function App() {
 
                 <div className="grid grid-cols-2 md:grid-cols-5 gap-3 pt-2">
                   <div className="bg-slate-900 p-3 rounded-lg border border-slate-800 text-center">
-                    <div className="text-[10px] text-slate-400">الكثافة \\(\\rho\\)</div>
+                    <div className="text-[10px] text-slate-400">الكثافة {<Latex math="\\rho" />}</div>
                     <div className="text-sm font-mono text-emerald-400 font-bold">{airProps.rho}</div>
                     <div className="text-[9px] text-slate-500">kg/m³</div>
                   </div>
                   <div className="bg-slate-900 p-3 rounded-lg border border-slate-800 text-center">
-                    <div className="text-[10px] text-slate-400">الحرارة النوعية \\(c_p\\)</div>
+                    <div className="text-[10px] text-slate-400">الحرارة النوعية {<Latex math="c_p" />}</div>
                     <div className="text-sm font-mono text-emerald-400 font-bold">{airProps.cp}</div>
                     <div className="text-[9px] text-slate-500">J/kg·K</div>
                   </div>
                   <div className="bg-slate-900 p-3 rounded-lg border border-slate-800 text-center">
-                    <div className="text-[10px] text-slate-400">الموصلية \\(k\\)</div>
+                    <div className="text-[10px] text-slate-400">الموصلية {<Latex math="k" />}</div>
                     <div className="text-sm font-mono text-emerald-400 font-bold">{airProps.k}</div>
                     <div className="text-[9px] text-slate-500">W/m·K</div>
                   </div>
                   <div className="bg-slate-900 p-3 rounded-lg border border-slate-800 text-center">
-                    <div className="text-[10px] text-slate-400">اللزوجة الحركية \\(\\nu\\)</div>
+                    <div className="text-[10px] text-slate-400">اللزوجة الحركية {<Latex math="\\nu" />}</div>
                     <div className="text-sm font-mono text-emerald-400 font-bold">{airProps.nu} ×10⁻⁶</div>
                     <div className="text-[9px] text-slate-500">m²/s</div>
                   </div>
                   <div className="bg-slate-900 p-3 rounded-lg border border-slate-800 text-center">
-                    <div className="text-[10px] text-slate-400">رقم برانتل \\(Pr\\)</div>
+                    <div className="text-[10px] text-slate-400">رقم برانتل {<Latex math="Pr" />}</div>
                     <div className="text-sm font-mono text-amber-400 font-bold">{airProps.Pr}</div>
                     <div className="text-[9px] text-slate-500">Dimensionless</div>
                   </div>

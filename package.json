@@ -13,12 +13,18 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "@babel/core": "^7.29.13",
+    "@babel/generator": "^7.29.13",
+    "@babel/parser": "^7.29.13",
+    "@babel/traverse": "^7.29.13",
+    "@tailwindcss/vite": "^4.3.4",
     "@types/katex": "^0.16.8",
     "@vitejs/plugin-react": "^6.0.5",
     "katex": "^0.18.4",
     "lucide-react": "^1.31.0",
     "react": "^19.2.8",
     "react-dom": "^19.2.8",
+    "tailwindcss": "^4.3.4",
     "vite": "^8.2.1"
   }
 }
